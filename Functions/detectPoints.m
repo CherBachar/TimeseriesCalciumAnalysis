@@ -52,28 +52,28 @@ if Plot==1
 end
 
 %% Remove locations with low intensity
-% 
-% meanIntensity = mean(I(:));
-% STDIntensity = std(double(I(:)));
-% 
-% for i = 1:length(interestPoints)
-%     intensities(i) = I(round(interestPoints(i,1)),round(interestPoints(i,2)));
-% end
-% 
-% [~,col] = find(intensities < (meanIntensity - STDIntensity));
-% interestPoints(col,:) = [];
-% 
-% % Plot interest points
-% if Plot==1
-%     figure; imagesc(I); colormap(gray); hold on;
-%     plot(interestPoints(:,1),interestPoints(:,2),'b+')
-%     title('Cell interest points');
-%     axis off;
-% end
+
+meanIntensity = mean(I(:));
+STDIntensity = std(double(I(:)));
+
+for i = 1:length(interestPoints)
+    intensities(i) = I(round(interestPoints(i,1)),round(interestPoints(i,2)));
+end
+
+[~,col] = find(intensities < (meanIntensity - STDIntensity));
+interestPoints(col,:) = [];
+
+% Plot interest points
+if Plot==1
+    figure; imagesc(I); colormap(gray); hold on;
+    plot(interestPoints(:,1),interestPoints(:,2),'b+')
+    title('Cell interest points');
+    axis off;
+end
 %% Shift centroids to local maximum
 
 %shift interest points to their local max
-%[cellLocations] = shiftCentroidsToLocalMax(cellLocations, I, shiftCentroid);
+[cellLocations] = shiftCentroidsToLocalMax(cellLocations, I, shiftCentroid);
 
 %% Discard close boutons
 %remove boutons closer than distThresh. Bouton with the lower pixel

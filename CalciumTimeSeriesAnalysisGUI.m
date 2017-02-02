@@ -22,7 +22,7 @@ function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 02-Feb-2017 10:58:48
+% Last Modified by GUIDE v2.5 02-Feb-2017 15:07:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,6 +60,10 @@ handles.distThresh = 10;
 handles.cellSize = 50;
 handles.con = 4;
 
+axes(handles.axes1);
+axis off
+axes(handles.axes2);
+axis off
 
 % Update handles structure
 guidata(hObject, handles);
@@ -182,6 +186,21 @@ sizeITs = size(ITimeseries,1);
 binaryImage2 = imresize(handles.binaryImage, [sizeITs sizeITs]);
 [binaryImageLabelledResized, numCells] = bwlabel(binaryImage2, handles.con);
 
+figure;imagesc(mean(ITimeseries,3));colormap(gray);
+title('Segmentation on time series mean image');
+axis off;
+hold on;
+
+[B,L] = bwboundaries(binaryImageLabelledResized,'noholes');
+%imshow(label2rgb(L, @jet, [.5 .5 .5]))
+for k = 1:length(B)
+   boundary = B{k};
+   plot(boundary(:,2), boundary(:,1), 'w', 'LineWidth', 2)
+end
+hold off;
+pause(1);
+
+
 disp(['in progress']);
 for c = 1:numCells
     mask = binaryImageLabelledResized == c; 
@@ -199,6 +218,8 @@ handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
 handles.binaryImageLabelledResized=binaryImageLabelledResized;
 
+
+% Detect peaks on traces
 [handles] = detectPeaks(trace, handles);
 axes(handles.axes3);
 trace = handles.df_fixedF0;
@@ -209,6 +230,7 @@ hold on
 plot(locs{1},trace(1,locs{1}), 'r*');
 hold off
 
+disp('Finished');
 guidata(hObject,handles);
 
 % --- Executes on button press in Save.
@@ -227,14 +249,6 @@ Data.trace = handles.trace;
 Data.numSpikes = handles.numSpikes;
 
 save('Data.mat', 'Data');
-
-
-
-% --------------------------------------------------------------------
-function Untitled_1_Callback(hObject, eventdata, handles)
-% hObject    handle to Untitled_1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 
 
@@ -280,3 +294,16 @@ function Contrast_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 imcontrast(gca);
 
+
+% --- Executes on button press in AddPeaks.
+function AddPeaks_Callback(hObject, eventdata, handles)
+% hObject    handle to AddPeaks (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in RemovePeaks.
+function RemovePeaks_Callback(hObject, eventdata, handles)
+% hObject    handle to RemovePeaks (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

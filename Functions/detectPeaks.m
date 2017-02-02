@@ -24,7 +24,7 @@ end
 df_fixedF0(:,time) = df_fixedF0(:,time-1);
 
 %% using https://github.com/LeventhalLab/EphysToolbox/tree/master/SpikeySpike
-
+%http://gaidi.ca/weblog/extracting-spikes-from-neural-electrophysiology-in-matlab
 for i = 1:numCells
     locs1(i,:) = artifactThresh(df_fixedF0(1,:),validMask,thresh);
     numSpikes = length(locs1);
