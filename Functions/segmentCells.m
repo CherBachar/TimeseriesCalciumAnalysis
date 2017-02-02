@@ -179,7 +179,7 @@ handles.binaryImage = binaryImage;
 
 axes(handles.axes2);
 imagesc(I); colormap(gray);
-title('Orignal image with segmented cells');
+title('Mean Image with segmented cells');
 axis off;
 hold on;
 

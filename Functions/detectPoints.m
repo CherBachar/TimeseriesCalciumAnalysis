@@ -84,7 +84,7 @@ end
 axes(handles.axes1);
 imagesc(I); colormap(gray); hold on;
 plot(cellLocations(:,1),cellLocations(:,2),'g+')
-title('Cell interest points');
+title('Mean Image with cell interest points');
 axis off;
 hold off;
 handles.cellLocations = cellLocations;

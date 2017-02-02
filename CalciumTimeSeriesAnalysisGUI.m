@@ -123,7 +123,7 @@ end
 axes(handles.axes1);
 imagesc(handles.meanImage); colormap(gray); hold on;
 plot(cells(:,1),cells(:,2),'g+')
-title('Cell interest points');
+title('Mean Image with cell interest points');
 axis off;
 hold off;
 
@@ -150,7 +150,7 @@ end
 axes(handles.axes1);
 imagesc(handles.meanImage); colormap(gray); hold on;
 plot(cells(:,1),cells(:,2),'g+')
-title('Cell interest points');
+title('Mean Image with cell interest points');
 axis off;
 hold off;
 
