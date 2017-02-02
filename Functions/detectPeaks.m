@@ -1,6 +1,5 @@
 function [handles] = detectPeaks(trace, handles)
 
-trace = handles.trace;
 Plot = 0;
 validMask = [1 1 1 0 -1 -1 -1];
 numCells = size(trace,1);
