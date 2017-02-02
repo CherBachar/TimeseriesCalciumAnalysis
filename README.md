@@ -2,6 +2,7 @@
 Software to analyse time-series neuron calcium signals from two-photon microscopy in-vivo
 
 Steps for analysis:
+Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
 
 1. Press 'Load mean image'- load an image that's a mean/ max projection from the time-series stack OR an single image of the same location
 
