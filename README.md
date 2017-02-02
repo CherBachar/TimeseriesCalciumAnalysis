@@ -16,3 +16,5 @@ Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
 5. To view traces, you can change the cell in the editable textbox at the bottom of the trace
 
 6. To save, press 'Save'. This will save all data in the same folder as 'Data.mat'
+
+*Add/ remove peaks functions don't work yet
