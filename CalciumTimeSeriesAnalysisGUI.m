@@ -57,7 +57,7 @@ handles.output = hObject;
 handles.detector = 'SURF';
 handles.shiftCentroid = 1;
 handles.distThresh = 10;
-handles.cellSize = 20;
+handles.cellSize = 50;
 handles.con = 4;
 
 
@@ -107,9 +107,6 @@ function SegmentCells_Callback(hObject, eventdata, handles)
 guidata(hObject,handles);
 
 
-
-
-
 % --- Executes on button press in Add.
 function Add_Callback(hObject, eventdata, handles)
 % hObject    handle to Add (see GCBO)
@@ -131,6 +128,7 @@ axis off;
 hold off;
 
 handles.cellLocations = cells;
+handles.numCells = length(cells);
 [handles] = segmentCells(handles.meanImage, handles);
 guidata(hObject,handles);
 
@@ -158,6 +156,7 @@ hold off;
 
 %save locations
 handles.cellLocations = cells;
+handles.numCells = length(cells);
 [handles] = segmentCells(handles.meanImage, handles);
 guidata(hObject,handles);
 
@@ -199,11 +198,16 @@ handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
 handles.binaryImageLabelledResized=binaryImageLabelledResized;
-axes(handles.axes3);
-plot(1:1:handles.time,trace(1,:));
-title(['Number of cells detected: ', num2str(numCells)]);
 
 [handles] = detectPeaks(trace, handles);
+axes(handles.axes3);
+trace = handles.df_fixedF0;
+locs = handles.locs;
+plot(1:1:handles.time,trace(1,:));
+title(['Number of cells detected: ', num2str(handles.numCells)]);
+hold on
+plot(locs{1},trace(1,locs{1}), 'r*');
+hold off
 
 guidata(hObject,handles);
 
@@ -212,12 +216,15 @@ function Save_Callback(hObject, eventdata, handles)
 % hObject    handle to Save (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+Data.meanImage_fullfilepath = handles.meanImage_fullfilepath;
+Data.imageStack_fullfilepath = handles.imageStack_fullfilepath;
 Data.meanImage = handles.meanImage;
 Data.ITimeseries = handles.ITimeseries;
 Data.binaryImage = handles.binaryImage;
 Data.cellLocations = handles.cellLocations;
 Data.binaryImageLabelledResized = handles.binaryImageLabelledResized;
 Data.trace = handles.trace;
+Data.numSpikes = handles.numSpikes;
 
 save('Data.mat', 'Data');
 
@@ -240,9 +247,13 @@ function CellNum_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of CellNum as a double
 n = str2double(get(hObject,'String'));
 axes(handles.axes3);
-trace = handles.trace;
+trace = handles.df_fixedF0;
+locs = handles.locs;
 plot(1:1:handles.time,trace(n,:));
-title(['Number of cells detected: ', num2str(handles.numCells)]);
+title(['Number of cells detected: ', num2str(length(locs))]);
+hold on
+plot(locs{n},trace(n,locs{n}), 'r*');
+hold off
 
 
 

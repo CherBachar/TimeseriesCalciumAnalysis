@@ -8,38 +8,42 @@ thresh = mean(trace(:))+std(trace(:));
 
 
 %% df/d calculation
-df_fixedF0 = zeros(time,numCells);
-min_10 = zeros(1,numCells);
-trace2 = trace';
-for r=1:time
-for c=(1:numCells-1)
-df_fixedF0(r,c) = (trace2(r,c+1)- min_10(1,c))/(min_10(1,c));
+sort_trace_by_F = sort(trace, 2, 'ascend');
+for x = 1:numCells
+min_10(x, 1) = mean(sort_trace_by_F(x, 1:10));
 end
+
+df_fixedF0 = zeros(numCells,time);
+for c=1:numCells
+    for t=1:(time-1)
+        df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
+    end
+    df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
 end
+df_fixedF0(:,time) = df_fixedF0(:,time-1);
 
 %% using https://github.com/LeventhalLab/EphysToolbox/tree/master/SpikeySpike
 
-% for i = 1:numCells
-%     locs(i,:) = artifactThresh(trace(1,:),validMask,thresh);
-%     numSpikes = length(locs);
-%     figure;
-%     plot(1:1:800,trace(i,:));
-%     title(['Number of cells detected: ', num2str(numSpikes)]);
-%     hold on
-%     plot(locs(i,:),trace(i,locs(i,:)), 'r*');
-%     pause(1);
-% end
+for i = 1:numCells
+    locs1(i,:) = artifactThresh(df_fixedF0(1,:),validMask,thresh);
+    numSpikes = length(locs1);
+    figure;
+    plot(1:1:800,df_fixedF0(i,:));
+    title(['Number of peaks detected: ', num2str(numSpikes)]);
+    hold on
+    plot(locs1(i,:),df_fixedF0(i,locs1(i,:)), 'r*');
+    pause(1);
+end
 
 %% Threshold method
-trace3 = df_fixedF0';
 for i = 1:numCells
-    %thresh = mean(trace3(i,:))+std(trace3(i,:));
-    %locs{i} = find(trace3(i,:) > thresh);
-    %numSpikes = length(locs);
+    thresh = mean(df_fixedF0(i,:))+std(df_fixedF0(i,:));
+    locs2{i} = find(df_fixedF0(i,:) > thresh);
+    numSpikes = length(locs2);
     figure;
-    plot(1:1:800,trace3(i,:));
-    %title(['Number of cells detected: ', num2str(numSpikes)]);
+    plot(1:1:800,df_fixedF0(i,:));
+    title(['Number of peaks detected: ', num2str(numSpikes)]);
     hold on
-    %plot(locs{i},trace3(i,locs{i}), 'r*');
+    plot(locs2{i},df_fixedF0(i,locs2{i}), 'r*');
     pause(1);
 end

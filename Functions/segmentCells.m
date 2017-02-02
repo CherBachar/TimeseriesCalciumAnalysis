@@ -132,7 +132,7 @@ for n = 1:length(cellPatch)
     %dilate
     BW2 = bwmorph(BW2,'close',inf);  
     
-    %remove all but 1 cells
+    %remove all but 2 cells
     [BWLabelled, num] = bwlabel(BW2, con);
     if num > 1
         area = [];
@@ -142,8 +142,10 @@ for n = 1:length(cellPatch)
            area(j) = bwarea(tempPatch(:,:,j));
         end
     
-    [~,index] = max(area);
-    BW2 = tempPatch(:,:,index);
+    [~,index1] = max(area);
+    area(index1)=0;
+    [~,index2] = max(area);
+    BW2 = (tempPatch(:,:,index1) + tempPatch(:,:,index2))> 0;
     end
     %cc = bwconncomp(BW); %not needed
     
