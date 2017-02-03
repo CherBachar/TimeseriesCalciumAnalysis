@@ -1,6 +1,10 @@
 # TimeseriesCalciumAnalysis
 Software to analyse time-series neuron calcium signals from two-photon microscopy in-vivo
 
+Requirements:
+
+Matlab + Image processing toolbox
+
 Steps for analysis:
 
 Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
