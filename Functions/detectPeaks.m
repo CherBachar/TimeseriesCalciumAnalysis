@@ -29,7 +29,7 @@ for i = 1:numCells
     numSpikes = length(locs1);
     if Plot == 1
         figure;
-        plot(1:1:800,df_fixedF0(i,:));
+        plot(1:1:time,df_fixedF0(i,:));
         title(['Number of peaks detected: ', num2str(numSpikes)]);
         hold on
         plot(locs1(i,:),df_fixedF0(i,locs1(i,:)), 'r*');
@@ -44,7 +44,7 @@ for i = 1:numCells
     numSpikes(i) = length(locs2);
     if Plot == 1
         figure;
-        plot(1:1:800,df_fixedF0(i,:));
+        plot(1:1:time,df_fixedF0(i,:));
         title(['Number of peaks detected: ', num2str(numSpikes(i))]);
         hold on
         plot(locs2{i},df_fixedF0(i,locs2{i}), 'r*');
@@ -52,7 +52,38 @@ for i = 1:numCells
     end
 end
 
+%% Cross-correlation method
+load('CrossCorr.mat');
+localMax = 10;
+for i = 1:numCells
+    [tracexCorr,lags] = xcorr(df_fixedF0(i,:),CrossCorrMask,'none');
+    thresh = mean(tracexCorr) + std(tracexCorr)/2;
+    traceThresh = tracexCorr.*(tracexCorr > thresh);
+    [pks,locsxCorr] = findpeaks(traceThresh);
+    
+    [~,I] = max(abs(locsxCorr));
+    lagDiff = lags(I);
+    %s1al = df_fixedF0(-lagDiff+1:end);
+    locsTemp1 = locsxCorr + lagDiff;
+    locsTemp1(locsTemp1 > time) = time;
+    for l = 1:length(locsTemp1)
+        x1 = locsTemp1(l)-localMax;
+        x2 = locsTemp1(l);
+        if (locsTemp1(l)+localMax) > time
+            x2 = time;
+        end
+        if (locsTemp1(l)-localMax) < 1
+            x1 = 1;
+        end
+        [~,ind] = max(df_fixedF0(i,x1:x2));
+        locsTemp(l) = locsTemp1(l) - localMax - 1 + ind;
+    end
+    locs3{i} = locsTemp;
+    numSpikes(i) = length(locsTemp);
+end
+%% save
 handles.df_fixedF0 = df_fixedF0;
-handles.locs = locs2;
+handles.locs = locs3;
 handles.numSpikes = numSpikes;
+
 end
