@@ -6,6 +6,7 @@ distThresh = handles.distThresh;
 cellSize = handles.cellSize;
 con = handles.con;
 sizeImage = handles.sizeImage;
+%load('LoGMask.mat');
 
 [LoGImage, padSize] = LoGConv(I, Plot); %convolve image with LoG mask
 LoGNorm = LoGImage / max((LoGImage(:)));

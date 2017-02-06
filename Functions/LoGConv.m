@@ -10,8 +10,7 @@ function [LoGImagePad, padSize] = LoGConv(image, Plot)
 %Initialize
 hsize = [25,25]; % no upper bound here, min~[20,20]
 sigma = 10; %relate the mask to the actual size of the bouton for sigma=4 only--> IG notch =0.31, which we want
-%L = fspecial('LoG',hsize,sigma);
-load('LoGMask.mat');
+L = fspecial('LoG',hsize,sigma);
 
 boundaryPixels = mean(mean([image(:,1), image(:,end), image(1, :)', image(end, :)']));
 padSize = round(hsize/2) + 10;
