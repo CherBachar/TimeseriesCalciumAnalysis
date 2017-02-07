@@ -1,17 +1,14 @@
-function [handles] = segmentCells(I, handles)
+function [Cells] = segmentCells(I, handles, cellLocations)
 %This function recieves mean image detects points, and segments them
 Plot = 0;
-%detector = handles.detector;
-%shiftCentroid = handles.shiftCentroid;
-%distThresh = handles.distThresh;
 cellSize = handles.cellSize;
 con = handles.con;
 sizeImage = handles.sizeImage;
-cellLocations = handles.cellLocations;
-
+numCellLocs = size(cellLocations,1);
+eccThresh = 0.95;
 %% Extract bouton patches
 %Extract the bouton patches using the bouton locations extracted
-for n = 1:length(cellLocations)
+for n = 1:numCellLocs
     x1(n) = round(cellLocations(n,1) - round(cellSize/2));
     x2(n) = round(cellLocations(n,1) + round(cellSize/2));
     y1(n) = round(cellLocations(n,2) - round(cellSize/2));
@@ -41,6 +38,8 @@ binaryImage = zeros(sizeImage);
 for n = 1:length(cellPatch)
     patch = cellPatch{n};
     maxPixelVal = max(patch(:));
+    minPixelVal = min(patch(:));
+    thresh2 = minPixelVal + ((maxPixelVal - minPixelVal) * 0.5);
     meanPixelVal = mean(patch(:));
     stdPixel = std(patch(:));
     thresh = meanPixelVal + stdPixel;
@@ -67,7 +66,6 @@ for n = 1:length(cellPatch)
     [~,index2] = max(area);
     BW2 = (tempPatch(:,:,index1) + tempPatch(:,:,index2))> 0;
     end
-    %cc = bwconncomp(BW); %not needed
     
     binaryImage(y1(n):y2(n),x1(n):x2(n)) = BW2;
     
@@ -85,23 +83,19 @@ for n = 1:length(cellPatch)
     end
 end
 
-binaryImage = bwmorph(binaryImage,'close',1); 
-[binaryImageLabelled, numCells] = bwlabel(binaryImage, con);
+%closing
+%binaryImage = bwmorph(binaryImage,'close',inf); 
 
-%% Plot
-handles.numCells = numCells;
-handles.binaryImage = binaryImage;
+%remove small regions
+binaryImage = bwareaopen(binaryImage,100,con);
 
-axes(handles.axes2);
-imagesc(I); colormap(gray);
-title('Mean Image with segmented cells');
-axis off;
-hold on;
+%remove high elonaged structures using Eccentricity
+Cells=regionprops(binaryImage, 'Centroid', 'Eccentricity', 'PixelIdxList');
 
-[B,L] = bwboundaries(binaryImageLabelled,'noholes');
-for k = 1:length(B)
-   boundary = B{k};
-   plot(boundary(:,2), boundary(:,1), 'w', 'LineWidth', 2)
+for r = 1:length(Cells)
+    remEccentricity(r) = Cells(r).Eccentricity > eccThresh;
 end
-hold off;
+
+Cells(remEccentricity) = [];
+
 end

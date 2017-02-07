@@ -66,6 +66,7 @@ for i = 1:numCells
     %s1al = df_fixedF0(-lagDiff+1:end);
     locsTemp1 = locsxCorr + lagDiff;
     locsTemp1(locsTemp1 > time) = time;
+    locsTemp = [];
     for l = 1:length(locsTemp1)
         x1 = locsTemp1(l)-localMax;
         x2 = locsTemp1(l);

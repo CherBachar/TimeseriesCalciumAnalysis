@@ -1,4 +1,4 @@
-function [handles] = detectPoints(I, handles)
+function [cellLocations] = detectPoints(I, handles)
 Plot = 0;
 detector = handles.detector;
 shiftCentroid = handles.shiftCentroid;
@@ -6,7 +6,6 @@ distThresh = handles.distThresh;
 cellSize = handles.cellSize;
 con = handles.con;
 sizeImage = handles.sizeImage;
-%load('LoGMask.mat');
 
 [LoGImage, padSize] = LoGConv(I, Plot); %convolve image with LoG mask
 LoGNorm = LoGImage / max((LoGImage(:)));
@@ -74,19 +73,21 @@ end
 %% Shift centroids to local maximum
 
 %shift interest points to their local max
-[cellLocations] = shiftCentroidsToLocalMax(cellLocations, I, shiftCentroid);
+%[interestPoints] = shiftCentroidsToLocalMax(interestPoints, I, shiftCentroid);
 
 %% Discard close boutons
 %remove boutons closer than distThresh. Bouton with the lower pixel
 %intensity is removed
 
-[cellLocations] = removeAllCloseBoutons(cellLocations, I, distThresh);
-% Plot interest points
-axes(handles.axes1);
-imagesc(I); colormap(gray); hold on;
-plot(cellLocations(:,1),cellLocations(:,2),'g+')
-title('Mean Image with cell interest points');
-axis off;
-hold off;
-handles.cellLocations = cellLocations;
+[cellLocations] = removeAllCloseBoutons(interestPoints, I, distThresh);
+
+% % Plot interest points
+% axes(handles.axes1);
+% imagesc(I); colormap(gray); hold on;
+% plot(cellLocations(:,1),cellLocations(:,2),'g+')
+% title('Mean Image with cell interest points');
+% axis off;
+% hold off;
+
+%handles.cellLocations = cellLocations;
 end

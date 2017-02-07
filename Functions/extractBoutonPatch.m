@@ -8,7 +8,7 @@ function [boutonPatch] = extractBoutonPatch(boutonLocations, boutonSize, sizeIma
 %Plot- 0 for don't plot, 1 for plot
 %Ouput:
 %boutonPatch- the bouton patch image
-numBoutons3 = length(boutonLocations);
+numBoutons3 = size(boutonLocations,1);
 
 for i = 1:numBoutons3
     x1 = round(boutonLocations(i,1) - round(boutonSize/2));

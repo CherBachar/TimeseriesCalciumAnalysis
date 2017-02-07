@@ -22,7 +22,7 @@ function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 02-Feb-2017 15:07:45
+% Last Modified by GUIDE v2.5 07-Feb-2017 10:05:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -106,64 +106,14 @@ function SegmentCells_Callback(hObject, eventdata, handles)
 % hObject    handle to SegmentCells (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-[handles] = detectPoints(handles.meanImage, handles);
-[handles] = segmentCells(handles.meanImage, handles);
+
+[cellLocations] = detectPoints(handles.meanImage, handles);
+[Cells] = segmentCells(handles.meanImage, handles, cellLocations);
+handles.Cells = Cells;
+
+plotCells(handles);
+
 guidata(hObject,handles);
-
-
-% --- Executes on button press in Add.
-function Add_Callback(hObject, eventdata, handles)
-% hObject    handle to Add (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-%add new boutons
-cells = handles.cellLocations;
-[xAdd,yAdd] = ginput;
-locationsAdd = [xAdd,yAdd];
-if ~isempty(locationsAdd)
-    locationsAdd = addPoints(locationsAdd, handles.meanImage);
-    cells = [cells; locationsAdd];
-end
-axes(handles.axes1);
-imagesc(handles.meanImage); colormap(gray); hold on;
-plot(cells(:,1),cells(:,2),'g+')
-title('Mean Image with cell interest points');
-axis off;
-hold off;
-
-handles.cellLocations = cells;
-handles.numCells = length(cells);
-[handles] = segmentCells(handles.meanImage, handles);
-guidata(hObject,handles);
-
-
-
-
-% --- Executes on button press in Remove.
-function Remove_Callback(hObject, eventdata, handles)
-% hObject    handle to Remove (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-%remove boutons selected
-
-cells = handles.cellLocations;
-[xRemove,yRemove] = ginput;
-if ~isempty(xRemove)
-    [cells,~]= removePoints(cells, xRemove, yRemove);
-end
-axes(handles.axes1);
-imagesc(handles.meanImage); colormap(gray); hold on;
-plot(cells(:,1),cells(:,2),'g+')
-title('Mean Image with cell interest points');
-axis off;
-hold off;
-
-%save locations
-handles.cellLocations = cells;
-handles.numCells = length(cells);
-[handles] = segmentCells(handles.meanImage, handles);
-guidata(hObject,handles);
-
 
 
 % --- Executes on button press in Analyse.
@@ -176,6 +126,7 @@ uiwait(msgbox('Load the corresponding time-series tif stack'));
 handles.imageStack_fullfilepath = [filepath,filename];
 imgInfo = imfinfo(handles.imageStack_fullfilepath);
 numLayers = length(imgInfo);
+Cells = handles.Cells;
 
 for time = 1:numLayers
     ITimeseries(:,:,time) = double(imread(handles.imageStack_fullfilepath, time));
@@ -183,16 +134,25 @@ end
 ITimeseries = ITimeseries;
 sizeITs = size(ITimeseries,1);
 
-binaryImage2 = imresize(handles.binaryImage, [sizeITs sizeITs]);
-[binaryImageLabelledResized, numCells] = bwlabel(binaryImage2, handles.con);
+binaryImage = zeros(handles.sizeImage);
+for l = 1:length(Cells)
+    %cellLocations(l,:) = Cells(l).Centroid;
+    index = Cells(l).PixelIdxList;
+    binaryImage(index)=1;
+    mask(:,:,l) = binaryImage;
+    maskResized(:,:,l) = imresize(mask(:,:,l), [sizeITs sizeITs]);
+end
+
+
+binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
+%[binaryImageLabelledResized, numCells] = bwlabel(binaryImage2, handles.con);
 
 figure;imagesc(mean(ITimeseries,3));colormap(gray);
 title('Segmentation on time series mean image');
 axis off;
 hold on;
 
-[B,L] = bwboundaries(binaryImageLabelledResized,'noholes');
-%imshow(label2rgb(L, @jet, [.5 .5 .5]))
+[B,L] = bwboundaries(binaryImageResized,'noholes');
 for k = 1:length(B)
    boundary = B{k};
    plot(boundary(:,2), boundary(:,1), 'w', 'LineWidth', 2)
@@ -201,14 +161,14 @@ hold off;
 pause(1);
 
 
-disp(['in progress']);
-for c = 1:numCells
-    mask = binaryImageLabelledResized == c; 
-    %mask3D = repmat(mask,[1,1,numLayers]);
+disp('in progress');
+for c = 1:length(Cells)
+    maskTemp = logical(maskResized(:,:,c)); 
+    %mask3D = repmat(mask,[1,1,numLayers]); %Less efficient
     %maskOnly = mask3D .* ITimeseries;
     for time = 1:numLayers
         temp = ITimeseries(:,:,time);
-        trace(c,time) = mean(mean(temp(mask)));
+        trace(c,time) = mean(mean(temp(maskTemp)));
     end    
     disp(['Cell: ', num2str(c)]);
 end
@@ -216,18 +176,17 @@ end
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
-handles.binaryImageLabelledResized=binaryImageLabelledResized;
 
 
 % Detect peaks on traces
 [handles] = detectPeaks(trace, handles);
 axes(handles.axes3);
-trace = handles.df_fixedF0;
+df_fixedF0 = handles.df_fixedF0;
 locs = handles.locs;
-plot(1:1:handles.time,trace(1,:));
-title(['Number of cells detected: ', num2str(handles.numCells)]);
+plot(1:1:handles.time,df_fixedF0(1,:));
+title(['Number of cells detected: ', num2str(length(Cells))]);
 hold on
-plot(locs{1},trace(1,locs{1}), 'r*');
+plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
 hold off
 
 disp('Finished');
@@ -241,13 +200,12 @@ function Save_Callback(hObject, eventdata, handles)
 Data.meanImage_fullfilepath = handles.meanImage_fullfilepath;
 Data.imageStack_fullfilepath = handles.imageStack_fullfilepath;
 Data.meanImage = handles.meanImage;
+Data.Cells = handles.Cells;
 Data.ITimeseries = handles.ITimeseries;
-Data.binaryImage = handles.binaryImage;
-Data.cellLocations = handles.cellLocations;
-Data.binaryImageLabelledResized = handles.binaryImageLabelledResized;
 Data.trace = handles.trace;
+Data.df_fixedF0 = handles.df_fixedF0;
+Data.locs = handles.locs;
 Data.numSpikes = handles.numSpikes;
-
 save('Data.mat', 'Data');
 
 
@@ -261,16 +219,14 @@ function CellNum_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of CellNum as a double
 n = str2double(get(hObject,'String'));
 axes(handles.axes3);
-trace = handles.df_fixedF0;
+df_fixedF0 = handles.df_fixedF0;
+trace = handles.trace;
 locs = handles.locs;
-plot(1:1:handles.time,trace(n,:));
+plot(1:1:handles.time,df_fixedF0(n,:));
 title(['Number of cells detected: ', num2str(length(locs))]);
 hold on
-plot(locs{n},trace(n,locs{n}), 'r*');
+plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
 hold off
-
-
-
 
 % --- Executes during object creation, after setting all properties.
 function CellNum_CreateFcn(hObject, eventdata, handles)
@@ -282,8 +238,6 @@ function CellNum_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
-
-    
 end
 
 
@@ -307,3 +261,50 @@ function RemovePeaks_Callback(hObject, eventdata, handles)
 % hObject    handle to RemovePeaks (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in AddCells.
+function AddCells_Callback(hObject, eventdata, handles)
+% hObject    handle to AddCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+Cells = handles.Cells;
+%Get new cells
+[xAdd,yAdd] = ginput;
+locationsAdd = [xAdd,yAdd];
+if ~isempty(locationsAdd)
+    locationsAdd = addPoints(locationsAdd, handles.meanImage);
+    
+    [newCells] = segmentCells(handles.meanImage, handles, locationsAdd);
+    Cells = [Cells; newCells];
+    handles.Cells = Cells;
+    plotCells(handles);
+end
+
+guidata(hObject,handles);
+
+
+% --- Executes on button press in RemoveCells.
+function RemoveCells_Callback(hObject, eventdata, handles)
+% hObject    handle to RemoveCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%Read cell locations
+Cells = handles.Cells;
+for c = 1:length(Cells)
+    cellLocations(c,:) = Cells(c).Centroid;
+end
+
+%Get cells to remove
+[xRemove,yRemove] = ginput;
+if ~isempty(xRemove)
+    [~, removedCells] = removeCells(cellLocations, xRemove, yRemove);
+    
+    Cells(removedCells) = [];
+    handles.Cells = Cells;
+
+    plotCells(handles);
+end
+
+guidata(hObject,handles);
