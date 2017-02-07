@@ -69,7 +69,7 @@ for i = 1:numCells
     locsTemp = [];
     for l = 1:length(locsTemp1)
         x1 = locsTemp1(l)-localMax;
-        x2 = locsTemp1(l);
+        x2 = locsTemp1(l)+localMax;
         if (locsTemp1(l)+localMax) > time
             x2 = time;
         end

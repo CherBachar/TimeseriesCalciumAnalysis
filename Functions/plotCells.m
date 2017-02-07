@@ -34,7 +34,7 @@ for k = 1:length(B)
 end
 for i = 1:size(cellLocations,1)
     hnd1=text(cellLocations(i,1),cellLocations(i,2),num2str(i));
-    set(hnd1,'FontSize',10, 'Color', 'r')
+    set(hnd1,'FontSize',12, 'Color', 'r')
 
 end
 hold off;
