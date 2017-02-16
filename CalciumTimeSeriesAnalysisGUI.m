@@ -316,7 +316,8 @@ if isfield(handles, 'locs')
     currLocs = [currLocs, round(xAdd)];
     locs{cell} = currLocs;
     handles.locs = locs;
-    
+    handles.numSpikes(cell) = length(currLocs);
+
     %Plot new pooints
     axes(handles.axes3);
     plot(1:1:handles.time,df_fixedF0(cell,:));
@@ -345,6 +346,7 @@ if isfield(handles, 'locs')
     currLocs(tempRemove) = [];
     locs{cell} = currLocs;
     handles.locs = locs;
+    handles.numSpikes(cell) = length(currLocs);
     
     %Plot new pooints
     axes(handles.axes3);
