@@ -1,4 +1,4 @@
-function [handles] = detectPeaks(trace, handles)
+function [handles] = detectPeaks(trace, traceNeuropil, handles)
 
 Plot = 0;
 validMask = [1 1 1 0 -1 -1 -1];
@@ -13,51 +13,71 @@ for x = 1:numCells
 min_10(x, 1) = mean(sort_trace_by_F(x, 1:10));
 end
 
-df_fixedF0 = zeros(numCells,time);
-for c=1:numCells
-    for t=1:(time-1)
-        df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
-    end
-    df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
+% df_fixedF0 = zeros(numCells,time);
+% for c=1:numCells
+%     for t=1:(time-1)
+%         df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
+%     end
+%     df_fixedF0(c,t) = (trace(c,t+1)- min_10(c))/(min_10(c));
+% end
+% df_fixedF0(:,time) = df_fixedF0(:,time-1);
+
+%% df/d calculation using the neuropil (i.e. surrounding area) to normalize
+
+%df_fixedF0 = (trace - traceNeuropil)./traceNeuropil;
+
+%with smoothing
+for i = 1:numCells
+    traceNeuropilSmooth(i,:) = smooth(traceNeuropil(i,:), 'loess');
 end
-df_fixedF0(:,time) = df_fixedF0(:,time-1);
+min10mat = repmat(min_10, [1, time]);
+df_fixedF0 = (trace - traceNeuropilSmooth)./min10mat;
+%Plot neuropil traces
+figure;
+subplot(2,1,1);
+plot(1:1:handles.time, traceNeuropilSmooth(1,:));
+title('Plot of Neuropil trace');
+subplot(2,1,2);
+plot(1:1:handles.time, trace(1,:));
+title('Plot of segmented cell');
+pause(1);
 
 %% using https://github.com/LeventhalLab/EphysToolbox/tree/master/SpikeySpike
 %http://gaidi.ca/weblog/extracting-spikes-from-neural-electrophysiology-in-matlab
-for i = 1:numCells
-    locs1(i,:) = artifactThresh(df_fixedF0(1,:),validMask,thresh);
-    numSpikes = length(locs1);
-    if Plot == 1
-        figure;
-        plot(1:1:time,df_fixedF0(i,:));
-        title(['Number of peaks detected: ', num2str(numSpikes)]);
-        hold on
-        plot(locs1(i,:),df_fixedF0(i,locs1(i,:)), 'r*');
-        pause(1);
-    end
-end
+% for i = 1:numCells
+%     locs1(i,:) = artifactThresh(df_fixedF0(1,:),validMask,thresh);
+%     numSpikes = length(locs1);
+%     if Plot == 1
+%         figure;
+%         plot(1:1:time,df_fixedF0(i,:));
+%         title(['Number of peaks detected: ', num2str(numSpikes)]);
+%         hold on
+%         plot(locs1(i,:),df_fixedF0(i,locs1(i,:)), 'r*');
+%         pause(1);
+%     end
+% end
 
 %% Threshold method
-for i = 1:numCells
-    thresh = mean(df_fixedF0(i,:))+std(df_fixedF0(i,:));
-    locs2{i} = find(df_fixedF0(i,:) > thresh);
-    numSpikes(i) = length(locs2);
-    if Plot == 1
-        figure;
-        plot(1:1:time,df_fixedF0(i,:));
-        title(['Number of peaks detected: ', num2str(numSpikes(i))]);
-        hold on
-        plot(locs2{i},df_fixedF0(i,locs2{i}), 'r*');
-        pause(1);
-    end
-end
+% for i = 1:numCells
+%     thresh = mean(df_fixedF0(i,:))+std(df_fixedF0(i,:));
+%     locs2{i} = find(df_fixedF0(i,:) > thresh);
+%     numSpikes(i) = length(locs2);
+%     if Plot == 1
+%         figure;
+%         plot(1:1:time,df_fixedF0(i,:));
+%         title(['Number of peaks detected: ', num2str(numSpikes(i))]);
+%         hold on
+%         plot(locs2{i},df_fixedF0(i,locs2{i}), 'r*');
+%         pause(1);
+%     end
+% end
 
 %% Cross-correlation method
 load('CrossCorr.mat');
 localMax = 10;
 for i = 1:numCells
     [tracexCorr,lags] = xcorr(df_fixedF0(i,:),CrossCorrMask,'none');
-    thresh = mean(tracexCorr) + std(tracexCorr)/2;
+    thresh = mean(tracexCorr) + std(tracexCorr);
     traceThresh = tracexCorr.*(tracexCorr > thresh);
     [pks,locsxCorr] = findpeaks(traceThresh);
     

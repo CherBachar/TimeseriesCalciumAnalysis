@@ -22,7 +22,7 @@ function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 07-Feb-2017 10:05:05
+% Last Modified by GUIDE v2.5 09-Feb-2017 19:54:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -135,18 +135,46 @@ ITimeseries = ITimeseries;
 sizeITs = size(ITimeseries,1);
 
 binaryImage = zeros(handles.sizeImage);
+binaryImageNeuropil = zeros(handles.sizeImage);
+
+%Cells and neuropil
 for l = 1:length(Cells)
-    %cellLocations(l,:) = Cells(l).Centroid;
+    %Get cell mask
+    tempMaskCell = zeros(handles.sizeImage);
     index = Cells(l).PixelIdxList;
     binaryImage(index)=1;
-    mask(:,:,l) = binaryImage;
-    maskResized(:,:,l) = imresize(mask(:,:,l), [sizeITs sizeITs]);
+    tempMaskCell(index)=1;
+    maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
+    
+    %Get neuropil mask
+    tempMaskNeuropil = zeros(handles.sizeImage);
+    index = Cells(l).neuropilPixelIdxList;
+    binaryImageNeuropil(index)=1;
+    tempMaskNeuropil(index)=1;
+    tempMaskNeuropil = (tempMaskNeuropil - tempMaskCell) >0;
+    maskNeuropilResized(:,:,l) = imresize(tempMaskNeuropil, [sizeITs sizeITs])>0;
+    %Plot neuropil binary image
+%     figure;imagesc(maskNeuropilResized(:,:,l));colormap(gray);
+%     title('Neuropil image');
+%     axis off;
+
+
 end
-
-
+binaryImageNeuropil = (binaryImageNeuropil - binaryImage) >0;
 binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
-%[binaryImageLabelledResized, numCells] = bwlabel(binaryImage2, handles.con);
+binaryImageNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
 
+%Plot neuropil binary image
+figure;imagesc(binaryImageResized);colormap(gray);
+title('Cell image');
+axis off;
+%Plot cell binary image
+figure;imagesc(binaryImageNeuropilResized);colormap(gray);
+title('Neuropil image');
+axis off;
+
+
+%Plot segmented cells on timeseries image
 figure;imagesc(mean(ITimeseries,3));colormap(gray);
 title('Segmentation on time series mean image');
 axis off;
@@ -158,28 +186,43 @@ for k = 1:length(B)
    plot(boundary(:,2), boundary(:,1), 'w', 'LineWidth', 2)
 end
 hold off;
-pause(1);
 
 
 disp('in progress');
 for c = 1:length(Cells)
-    maskTemp = logical(maskResized(:,:,c)); 
+    maskTempCell = logical(maskResized(:,:,c)); 
+    maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
     %mask3D = repmat(mask,[1,1,numLayers]); %Less efficient
     %maskOnly = mask3D .* ITimeseries;
+    
+%     figure;imagesc(maskTempNeuropil); colormap(gray);
+%     movegui('west');
+%     figure;imagesc(maskTempCell); colormap(gray);
+%     movegui('east');
+    
     for time = 1:numLayers
-        temp = ITimeseries(:,:,time);
-        trace(c,time) = mean(mean(temp(maskTemp)));
+        tempIT1 = ITimeseries(:,:,time);
+        trace(c,time) = mean(mean(tempIT1(maskTempCell)));
+        traceNeuropil(c,time) = mean(mean(tempIT1(maskTempNeuropil)));
     end    
     disp(['Cell: ', num2str(c)]);
+    
+%     %Plot neuropil traces
+%     subplot(2,1,1);
+%     plot(1:1:handles.time, traceNeuropil(n,:));
+%     title('Plot of Neuropil trace');
+%     subplot(2,1,2);
+%     plot(1:1:handles.time, trace(n,:));
+%     title('Plot of segmented cell');
+%     pause(1);
 end
 
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
 
-
 % Detect peaks on traces
-[handles] = detectPeaks(trace, handles);
+[handles] = detectPeaks(trace, traceNeuropil, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 locs = handles.locs;
@@ -308,3 +351,36 @@ if ~isempty(xRemove)
 end
 
 guidata(hObject,handles);
+
+
+% --- Executes on button press in DrawBox.
+function DrawBox_Callback(hObject, eventdata, handles)
+% hObject    handle to DrawBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+image = handles.meanImage;
+sizeImage = handles.sizeImage;
+box = getrect(); %box for neuropil
+x1 = round(box(1));
+y1 = round(box(2));
+x2 = round(box(3) + x1);
+y2 = round(box(4) + y1);
+if x1 < 1
+    x1 = 1;
+end
+if y1 < 1 
+    y1 = 1;
+end
+if x2 > sizeImage
+    x2 = round(sizeImage);
+end
+if y2 > sizeImage
+    y2 = round(sizeImage);
+end
+
+neuropil = mean(mean(image(y1:y2, x1:x2)));
+disp('done');
+    
+
+

@@ -6,6 +6,9 @@ con = handles.con;
 sizeImage = handles.sizeImage;
 numCellLocs = size(cellLocations,1);
 eccThresh = 0.95;
+
+sizeITs = 256;
+
 %% Extract bouton patches
 %Extract the bouton patches using the bouton locations extracted
 for n = 1:numCellLocs
@@ -69,8 +72,7 @@ for n = 1:length(cellPatch)
     
     binaryImage(y1(n):y2(n),x1(n):x2(n)) = BW2;
     
-    
-    if Plot == 1
+    if Plot==1
         figure, imagesc(patch); colormap(gray);
         title('Orignal patch');
         movegui('west');
@@ -78,24 +80,57 @@ for n = 1:length(cellPatch)
         figure, imagesc(BW2); colormap(gray);
         title('Segmented Image');
         movegui('east');
-        axis off;
-        pause(1);
+        axis off;        
     end
 end
 
 %closing
-%binaryImage = bwmorph(binaryImage,'close',inf); 
+binaryImage = bwmorph(binaryImage,'close',inf); 
 
 %remove small regions
 binaryImage = bwareaopen(binaryImage,100,con);
 
 %remove high elonaged structures using Eccentricity
-Cells=regionprops(binaryImage, 'Centroid', 'Eccentricity', 'PixelIdxList');
+Cells=regionprops(binaryImage, 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
 
-for r = 1:length(Cells)
-    remEccentricity(r) = Cells(r).Eccentricity > eccThresh;
+if ~isempty(Cells)
+    remEccentricity = logical(zeros(1,length(Cells)));
+    for r = 1:length(Cells)
+        remEccentricity(r) = Cells(r).Eccentricity > eccThresh;
+    end
+end
+if ~isempty(remEccentricity)
+    Cells(remEccentricity) = [];
 end
 
-Cells(remEccentricity) = [];
+%Get neuropil mask per cell
+for c = 1:length(Cells)
+    tempImageCell = zeros(sizeImage);
+    tempImageBox= zeros(sizeImage);
+    tempImageCell(Cells(c).PixelIdxList) = 1;
+    Centroid = Cells(c).Centroid;
+    x1 = round(Centroid(1) - round(cellSize/2));
+    x2 = round(Centroid(1) + round(cellSize/2));
+    y1 = round(Centroid(2) - round(cellSize/2));
+    y2 = round(Centroid(2) + round(cellSize/2));
 
+    %Ensure indeces are within the image margins
+    if x1 <= 0
+        x1 = 1;
+    end
+    if y1 <= 0
+        y1 = 1;
+    end
+    if x2 > sizeImage
+        x2 = round(sizeImage);
+    end
+    if y2 > sizeImage
+        y2 = round(sizeImage);
+    end
+    
+    tempImageBox(y1:y2, x1:x2) = 1;
+    neuropilImage = (tempImageBox - tempImageCell)>0;
+    tempNeuropilPixels=regionprops(neuropilImage, 'PixelIdxList');
+    Cells(c).neuropilPixelIdxList = tempNeuropilPixels(1).PixelIdxList;
+end
 end
