@@ -22,7 +22,7 @@ function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 09-Feb-2017 19:54:43
+% Last Modified by GUIDE v2.5 16-Feb-2017 12:42:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -89,6 +89,7 @@ function Load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 %uiwait(msgbox('Load a mean image (.tif)'));
 [filename, filepath] = uigetfile('*.tif*');
+handles.filename = filename;
 handles.meanImage_fullfilepath = [filepath,filename];
 I = double(imread(handles.meanImage_fullfilepath));
 axes(handles.axes1);
@@ -98,6 +99,9 @@ imagesc(I); colormap(gray); title('original image'); axis off;
 
 handles.sizeImage = size(I,1);
 handles.meanImage = I;
+
+set(handles.imageName, 'String', ['File name: ', filename]);
+
 guidata(hObject,handles);
 
 
@@ -232,6 +236,7 @@ hold on
 plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
 hold off
 
+handles.n = 1;
 disp('Finished');
 guidata(hObject,handles);
 
@@ -240,8 +245,7 @@ function Save_Callback(hObject, eventdata, handles)
 % hObject    handle to Save (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-Data.meanImage_fullfilepath = handles.meanImage_fullfilepath;
-Data.imageStack_fullfilepath = handles.imageStack_fullfilepath;
+Data.filename = handles.filename;
 Data.meanImage = handles.meanImage;
 Data.Cells = handles.Cells;
 Data.ITimeseries = handles.ITimeseries;
@@ -270,6 +274,9 @@ title(['Number of cells detected: ', num2str(length(locs))]);
 hold on
 plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
 hold off
+handles.n = n;
+guidata(hObject,handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function CellNum_CreateFcn(hObject, eventdata, handles)
@@ -297,13 +304,58 @@ function AddPeaks_Callback(hObject, eventdata, handles)
 % hObject    handle to AddPeaks (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if isfield(handles, 'locs')
+    locs = handles.locs;
+    df_fixedF0 = handles.df_fixedF0;
+    cell = handles.n;
+    currLocs = locs{cell};
+    [xAdd,~] = ginput;
+    
+    [xAdd] = localPeakDetector(round(xAdd), handles);
+    
+    currLocs = [currLocs, round(xAdd)];
+    locs{cell} = currLocs;
+    handles.locs = locs;
+    
+    %Plot new pooints
+    axes(handles.axes3);
+    plot(1:1:handles.time,df_fixedF0(cell,:));
+    title(['Number of cells detected: ', num2str(length(locs))]);
+    hold on
+    plot(locs{cell},df_fixedF0(cell,locs{cell}), 'r*');
+    hold off
 
+    guidata(hObject,handles);
+end
 
 % --- Executes on button press in RemovePeaks.
 function RemovePeaks_Callback(hObject, eventdata, handles)
 % hObject    handle to RemovePeaks (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if isfield(handles, 'locs')
+    locs = handles.locs;
+    df_fixedF0 = handles.df_fixedF0;
+    cell = handles.n;
+    currLocs = locs{cell};
+    [yRemove,~] = ginput;
+    for i = 1:length(yRemove)
+        [~, tempRemove(i)] = min(abs(currLocs - yRemove(i)));
+    end
+    currLocs(tempRemove) = [];
+    locs{cell} = currLocs;
+    handles.locs = locs;
+    
+    %Plot new pooints
+    axes(handles.axes3);
+    plot(1:1:handles.time,df_fixedF0(cell,:));
+    title(['Number of cells detected: ', num2str(length(locs))]);
+    hold on
+    plot(locs{cell},df_fixedF0(cell,locs{cell}), 'r*');
+    hold off
+
+    guidata(hObject,handles);
+end
 
 
 % --- Executes on button press in AddCells.
@@ -382,5 +434,3 @@ end
 neuropil = mean(mean(image(y1:y2, x1:x2)));
 disp('done');
     
-
-
