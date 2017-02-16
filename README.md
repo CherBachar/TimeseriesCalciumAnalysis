@@ -22,3 +22,5 @@ Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
 6. You can add/ remove peaks by clicking on the corresponding buttons, and pressing 'Enter' once done.
 
 7. To save, press 'Save'. This will save all data in the same folder as 'Data.mat'
+
+8. To load data, first load mean image (by pressing 'Load Mean Image'), and then press 'Load Data' to load previously analysed data

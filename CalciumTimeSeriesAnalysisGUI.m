@@ -22,7 +22,7 @@ function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 16-Feb-2017 12:42:45
+% Last Modified by GUIDE v2.5 16-Feb-2017 14:26:51
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -59,6 +59,7 @@ handles.shiftCentroid = 1;
 handles.distThresh = 10;
 handles.cellSize = 50;
 handles.con = 4;
+handles.n = 1;
 
 axes(handles.axes1);
 axis off
@@ -271,10 +272,10 @@ trace = handles.trace;
 
 
 locs = handles.locs;
-if ~isempty(locs{n})
     plot(1:1:handles.time,df_fixedF0(n,:));
     title(['Number of cells detected: ', num2str(length(locs))]);
-    hold on
+if ~isempty(locs{n})
+    hold on 
     plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
     hold off
 end
@@ -382,6 +383,8 @@ if ~isempty(locationsAdd)
     plotCells(handles);
 end
 
+
+
 guidata(hObject,handles);
 
 
@@ -440,3 +443,26 @@ end
 neuropil = mean(mean(image(y1:y2, x1:x2)));
 disp('done');
     
+
+
+% --- Executes on button press in loadData.
+function loadData_Callback(hObject, eventdata, handles)
+% hObject    handle to loadData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[filename, filepath] = uigetfile('*.mat*');
+load([filepath, filename]);
+handles.filename = Data.filename;
+handles.meanImage = Data.meanImage;
+handles.sizeImage = size(handles.meanImage,1);
+handles.Cells = Data.Cells;
+handles.trace = Data.trace;
+handles.df_fixedF0 = Data.df_fixedF0;
+handles.locs = Data.locs;
+handles.numSpikes = Data.numSpikes;
+handles.time = size(handles.trace,2);
+handles.n = 1;
+plotCells(handles);
+plotPeaks(handles);
+display('finished loading');
+guidata(hObject,handles);
