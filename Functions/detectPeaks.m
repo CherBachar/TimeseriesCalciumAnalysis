@@ -77,7 +77,7 @@ load('CrossCorr.mat');
 localMax = 10;
 for i = 1:numCells
     [tracexCorr,lags] = xcorr(df_fixedF0(i,:),CrossCorrMask,'none');
-    thresh = mean(tracexCorr) + std(tracexCorr);
+    thresh = mean(tracexCorr) + std(tracexCorr)*1.5;
     traceThresh = tracexCorr.*(tracexCorr > thresh);
     [pks,locsxCorr] = findpeaks(traceThresh);
     
@@ -98,6 +98,14 @@ for i = 1:numCells
         end
         [~,ind] = max(df_fixedF0(i,x1:x2));
         locsTemp(l) = locsTemp1(l) - localMax - 1 + ind;
+        
+        %make sure it's between 1-time
+        if locsTemp(l) < 1
+            locsTemp(l) = 1;
+        end
+        if locsTemp(l) > time
+            locsTemp(l) = time;
+        end        
     end
     locs3{i} = locsTemp;
     numSpikes(i) = length(locsTemp);

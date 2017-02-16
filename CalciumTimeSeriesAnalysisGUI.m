@@ -268,12 +268,16 @@ n = str2double(get(hObject,'String'));
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 trace = handles.trace;
+
+
 locs = handles.locs;
-plot(1:1:handles.time,df_fixedF0(n,:));
-title(['Number of cells detected: ', num2str(length(locs))]);
-hold on
-plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
-hold off
+if ~isempty(locs{n})
+    plot(1:1:handles.time,df_fixedF0(n,:));
+    title(['Number of cells detected: ', num2str(length(locs))]);
+    hold on
+    plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
+    hold off
+end
 handles.n = n;
 guidata(hObject,handles);
 
