@@ -2,6 +2,7 @@ function [Cells] = segmentCells(I, handles, cellLocations)
 %This function recieves mean image detects points, and segments them
 Plot = 0;
 cellSize = handles.cellSize;
+neuropilSize = 50;
 con = handles.con;
 sizeImage = handles.sizeImage;
 numCellLocs = size(cellLocations,1);
@@ -93,6 +94,17 @@ binaryImage = bwareaopen(binaryImage,100,con);
 %remove high elonaged structures using Eccentricity
 Cells=regionprops(binaryImage, 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
 
+% for i = 1:length(Cells)
+%     boundingBox(i,:) = Cells(i).BoundingBox;
+% end
+% LargestWidth = max(boundingBox(:,3));
+% LargestHeight = max(boundingBox(:,4));
+% neuropilBoxSize = max([LargestWidth, LargestHeight]);
+% 
+% if neuropilBoxSize > neuropilSize
+%     neuropilSize = neuropilBoxSize;
+% end
+
 if ~isempty(Cells)
     remEccentricity = logical(zeros(1,length(Cells)));
     for r = 1:length(Cells)
@@ -109,10 +121,10 @@ for c = 1:length(Cells)
     tempImageBox= zeros(sizeImage);
     tempImageCell(Cells(c).PixelIdxList) = 1;
     Centroid = Cells(c).Centroid;
-    x1 = round(Centroid(1) - round(cellSize/2));
-    x2 = round(Centroid(1) + round(cellSize/2));
-    y1 = round(Centroid(2) - round(cellSize/2));
-    y2 = round(Centroid(2) + round(cellSize/2));
+    x1 = round(Centroid(1) - round(neuropilSize/2));
+    x2 = round(Centroid(1) + round(neuropilSize/2));
+    y1 = round(Centroid(2) - round(neuropilSize/2));
+    y2 = round(Centroid(2) + round(neuropilSize/2));
 
     %Ensure indeces are within the image margins
     if x1 <= 0

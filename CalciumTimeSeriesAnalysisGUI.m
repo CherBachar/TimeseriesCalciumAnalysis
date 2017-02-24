@@ -222,12 +222,26 @@ for c = 1:length(Cells)
 %     pause(1);
 end
 
+%Take into account only inactive portions of the neurpil 
+% = anything less the 2*STD of the cell
+stdCell = std(trace,0, 2);
+for c = 1:length(Cells)
+    maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
+    for time = 1:numLayers
+        tempIT1 = ITimeseries(:,:,time);
+        tempNeuropil = tempIT1(maskTempNeuropil);
+        tempNeuropil = tempNeuropil(tempIT1(maskTempNeuropil) <= 2*stdCell(c));
+        traceNeuropilInactive(c,time) = mean(mean(tempNeuropil));
+        
+    end
+    display(['Neuropil: ', num2str(c)]);
+end
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
 
 % Detect peaks on traces
-[handles] = detectPeaks(trace, traceNeuropil, handles);
+[handles] = detectPeaks(trace, traceNeuropilInactive, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 locs = handles.locs;
