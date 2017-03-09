@@ -1,4 +1,4 @@
-function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
+    function varargout = CalciumTimeSeriesAnalysisGUI(varargin)
 % CALCIUMTIMESERIESANALYSISGUI MATLAB code for CalciumTimeSeriesAnalysisGUI.fig
 %      CALCIUMTIMESERIESANALYSISGUI, by itself, creates a new CALCIUMTIMESERIESANALYSISGUI or raises the existing
 %      singleton*.
@@ -60,6 +60,7 @@ handles.distThresh = 10;
 handles.cellSize = 50;
 handles.con = 4;
 handles.n = 1;
+handles.load = 0;
 
 axes(handles.axes1);
 axis off
@@ -100,6 +101,7 @@ imagesc(I); colormap(gray); title('original image'); axis off;
 
 handles.sizeImage = size(I,1);
 handles.meanImage = I;
+handles.load = 0;
 
 set(handles.imageName, 'String', ['File name: ', filename]);
 
@@ -126,17 +128,23 @@ function Analyse_Callback(hObject, eventdata, handles)
 % hObject    handle to Analyse (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-uiwait(msgbox('Load the corresponding time-series tif stack'));
-[filename, filepath] = uigetfile('*.tif*');
-handles.imageStack_fullfilepath = [filepath,filename];
-imgInfo = imfinfo(handles.imageStack_fullfilepath);
-numLayers = length(imgInfo);
 Cells = handles.Cells;
+inactive = 0;
 
-for time = 1:numLayers
-    ITimeseries(:,:,time) = double(imread(handles.imageStack_fullfilepath, time));
+if handles.load == 0
+    uiwait(msgbox('Load the corresponding time-series tif stack'));
+    [filename, filepath] = uigetfile('*.tif*');
+    handles.imageStack_fullfilepath = [filepath,filename];
+    imgInfo = imfinfo(handles.imageStack_fullfilepath);
+    numLayers = length(imgInfo);
+
+    for time = 1:numLayers
+        ITimeseries(:,:,time) = double(imread(handles.imageStack_fullfilepath, time));
+    end
+else
+    ITimeseries =handles.ITimeseries;
+    numLayers = size(ITimeseries,3);
 end
-ITimeseries = ITimeseries;
 sizeITs = size(ITimeseries,1);
 
 binaryImage = zeros(handles.sizeImage);
@@ -224,26 +232,29 @@ end
 
 %Take into account only inactive portions of the neurpil 
 % = anything less the 2*STD of the cell
-stdCell = std(trace,0, 2);
-for c = 1:length(Cells)
-    maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
-    for time = 1:numLayers
-        tempIT1 = ITimeseries(:,:,time);
-        tempNeuropil = tempIT1(maskTempNeuropil);
-        tempNeuropil = tempNeuropil(tempIT1(maskTempNeuropil) <= 2*stdCell(c));
-        traceNeuropilInactive(c,time) = mean(mean(tempNeuropil));
-        
+if inactive == 1
+    stdCell = std(trace,0, 2);
+    for c = 1:length(Cells)
+        maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
+        for time = 1:numLayers
+            tempIT1 = ITimeseries(:,:,time);
+            tempNeuropil = tempIT1(maskTempNeuropil);
+            tempNeuropil = tempNeuropil(tempIT1(maskTempNeuropil) <= 2*stdCell(c));
+            traceNeuropilInactive(c,time) = mean(mean(tempNeuropil));
+
+        end
+        display(['Neuropil: ', num2str(c)]);
     end
-    display(['Neuropil: ', num2str(c)]);
 end
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
 
 % Detect peaks on traces
-[handles] = detectPeaks(trace, traceNeuropilInactive, handles);
+[handles] = detectPeaks(trace, traceNeuropil, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
+df_fixedF0WOBack = handles.df_fixedF0WOBack;
 locs = handles.locs;
 plot(1:1:handles.time,df_fixedF0(1,:));
 title(['Number of cells detected: ', num2str(length(Cells))]);
@@ -252,6 +263,17 @@ plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
 hold off
 
 handles.n = 1;
+figure;
+subplot(3,1,1);
+plot(1:1:handles.time, trace(handles.n,:));
+title('Plot of raw trace');
+subplot(3,1,2);
+plot(1:1:handles.time, df_fixedF0(handles.n,:));
+title('Plot of DF/F0 trace- with background substracted');
+subplot(3,1,3);
+plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+title('Plot of DF/F0 trace- without background substracted');
+
 disp('Finished');
 guidata(hObject,handles);
 
@@ -283,7 +305,7 @@ n = str2double(get(hObject,'String'));
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 trace = handles.trace;
-
+df_fixedF0WOBack = handles.df_fixedF0WOBack;
 
 locs = handles.locs;
     plot(1:1:handles.time,df_fixedF0(n,:));
@@ -294,6 +316,18 @@ if ~isempty(locs{n})
     hold off
 end
 handles.n = n;
+
+figure;
+subplot(3,1,1);
+plot(1:1:handles.time, trace(handles.n,:));
+title('Plot of raw trace');
+subplot(3,1,2);
+plot(1:1:handles.time, df_fixedF0(handles.n,:));
+title('Plot of DF/F0 trace- with background substracted');
+subplot(3,1,3);
+plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+title('Plot of DF/F0 trace- without background substracted');
+
 guidata(hObject,handles);
 
 
@@ -333,7 +367,7 @@ if isfield(handles, 'locs')
     [xAdd] = localPeakDetector(round(xAdd), handles);
     
     currLocs = [currLocs, round(xAdd)];
-    locs{cell} = currLocs;
+    locs{cell,1} = currLocs;
     handles.locs = locs;
     handles.numSpikes(cell) = length(currLocs);
 
@@ -363,7 +397,7 @@ if isfield(handles, 'locs')
         [~, tempRemove(i)] = min(abs(currLocs - yRemove(i)));
     end
     currLocs(tempRemove) = [];
-    locs{cell} = currLocs;
+    locs{cell,1} = currLocs;
     handles.locs = locs;
     handles.numSpikes(cell) = length(currLocs);
     
@@ -396,9 +430,6 @@ if ~isempty(locationsAdd)
     handles.Cells = Cells;
     plotCells(handles);
 end
-
-
-
 guidata(hObject,handles);
 
 
@@ -466,6 +497,7 @@ function loadData_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 [filename, filepath] = uigetfile('*.mat*');
 load([filepath, filename]);
+set(handles.imageName, 'String', ['File name: ', filename(1:end-4)]);
 handles.filename = Data.filename;
 handles.meanImage = Data.meanImage;
 handles.sizeImage = size(handles.meanImage,1);
@@ -475,7 +507,9 @@ handles.df_fixedF0 = Data.df_fixedF0;
 handles.locs = Data.locs;
 handles.numSpikes = Data.numSpikes;
 handles.time = size(handles.trace,2);
+handles.ITimeseries = Data.ITimeseries;
 handles.n = 1;
+handles.load = 1;
 plotCells(handles);
 plotPeaks(handles);
 display('finished loading');
