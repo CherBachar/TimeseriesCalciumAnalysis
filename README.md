@@ -3,11 +3,13 @@ Software to analyse time-series neuron calcium signals from two-photon microscop
 
 Requirements:
 
-Matlab + Image processing toolbox
+  Matlab + Image processing toolbox
 
-Steps for analysis:
+Installation:
 
-Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
+  Go into the folder, and add all folders to path
+
+  To start: Run 'CalciumTimeSeriesAnalysisGUI.m' 
 
 1. Press 'Load mean image'- load an image that's a mean/ max projection from the time-series stack OR an single image of the same location
 
@@ -23,4 +25,4 @@ Run 'CalciumTimeSeriesAnalysisGUI.m' - make sure all folders are in path.
 
 7. To save, press 'Save'. This will save all data in the same folder as 'Data.mat'
 
-8. To load data, first load mean image (by pressing 'Load Mean Image'), and then press 'Load Data' to load previously analysed data
+8. To load data, press 'Load Data' to load previously analysed data
