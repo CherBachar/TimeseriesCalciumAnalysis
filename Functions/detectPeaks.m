@@ -169,26 +169,40 @@ end
 %% Cross Correlation method with several spike examples
 load('spikeShapes.mat');
 localMax = 10;
-scale_SD = 2;
+scale_SD = 1;
 locs3=cell(numCells,1);
 for i = 1:numCells
-    [tracexCorrTemp{1},lags] = xcorr(df_fixedF0(i,:),meanNormalSpike,'none');
-    [tracexCorrTemp{2},lags] = xcorr(df_fixedF0(i,:),meanFastSpike,'none');
-    [tracexCorrTemp{3},lags] = xcorr(df_fixedF0(i,:),meanFlatSpike,'none');
+    %normxcorr2
+    meanNormalSpike = meanNormalSpike - mean(meanNormalSpike);
+    meanFastSpike = meanFastSpike - mean(meanFastSpike);
+    meanFlatSpike = meanFlatSpike - mean(meanFlatSpike);
+    [tracexCorrTemp{1}] = normxcorr2(meanNormalSpike, df_fixedF0(i,:));
+    [tracexCorrTemp{2}] = normxcorr2(meanFastSpike, df_fixedF0(i,:));
+    [tracexCorrTemp{3}] = normxcorr2(meanFlatSpike, df_fixedF0(i,:));
     for t = 1:length(tracexCorrTemp)
         tracexCorr = tracexCorrTemp{t};
         thresh = mean(tracexCorr) + std(tracexCorr)*scale_SD;
         traceThresh = tracexCorr.*(tracexCorr > thresh);
         [pks,locsxCorr] = findpeaks(traceThresh);
-
-        [~,I] = max(abs(locsxCorr));
-        lagDiff = lags(I);
-        locsTemp = locsxCorr + lagDiff;
+        lagDiff = length(meanFastSpike)-1;
+        %[~,I] = max(abs(locsxCorr));
+        %lagDiff = lags(I);
+        locsTemp = locsxCorr - lagDiff;
         locsTemp(locsTemp > time) = time;
-
-        [locs] = findLocalMax(locsTemp, df_fixedF0, i, time, localMax);
+        locsTemp(locsTemp < 1) = 1;
         
-        locs3{i,1} = sort([locs3{i}, locs], 'ascend');
+        %check threshold of original trace as well
+        if ~isempty(locsTemp)
+            threshOrigTrace = mean(df_fixedF0WOBack(i,:));
+            locsTemp(df_fixedF0WOBack(i, locsTemp) < threshOrigTrace) = [];
+            
+
+            [locs] = findLocalMax(locsTemp, df_fixedF0, i, time, localMax);
+            zeroThresh = 0;
+            locs(df_fixedF0(i, locs) < zeroThresh) = [];
+
+            locs3{i,1} = sort([locs3{i}, locs], 'ascend');
+        end
     end
 end
 
