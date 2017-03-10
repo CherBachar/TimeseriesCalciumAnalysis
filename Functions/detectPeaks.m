@@ -48,7 +48,7 @@ df_fixedF0 = ((trace - traceNeuropilSmooth)-min10mat)./min10mat;
 % pause(1);
 
 %% DF/F0 using kalman filter
-kal = 1;
+kal = 0;
 if kal == 1
     A = [1.1269   -0.4940    0.1129;
          1.0000         0         0;
