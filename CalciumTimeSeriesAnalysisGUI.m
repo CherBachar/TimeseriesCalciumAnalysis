@@ -274,7 +274,11 @@ subplot(3,1,3);
 plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
 title('Plot of DF/F0 trace- without background substracted');
 
-disp('Finished');
+%Find synchrony 
+[handles] = findCaSynchrony(df_fixedF0, handles);
+
+disp('Finished analysis');
+
 guidata(hObject,handles);
 
 % --- Executes on button press in Save.
@@ -316,17 +320,17 @@ if ~isempty(locs{n})
     hold off
 end
 handles.n = n;
-% 
-% figure;
-% subplot(3,1,1);
-% plot(1:1:handles.time, trace(handles.n,:));
-% title('Plot of raw trace');
-% subplot(3,1,2);
-% plot(1:1:handles.time, df_fixedF0(handles.n,:));
-% title('Plot of DF/F0 trace- with background substracted');
-% subplot(3,1,3);
-% plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-% title('Plot of DF/F0 trace- without background substracted');
+
+figure;
+subplot(3,1,1);
+plot(1:1:handles.time, trace(handles.n,:));
+title('Plot of raw trace');
+subplot(3,1,2);
+plot(1:1:handles.time, df_fixedF0(handles.n,:));
+title('Plot of DF/F0 trace- with background substracted');
+subplot(3,1,3);
+plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+title('Plot of DF/F0 trace- without background substracted');
 
 guidata(hObject,handles);
 

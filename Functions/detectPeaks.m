@@ -39,8 +39,8 @@ df_fixedF0 = ((trace - traceNeuropilSmooth)-min10mat)./min10mat;
 % plot(1:1:handles.time, trace(17,:));
 % title('Plot of raw trace');
 % subplot(3,1,2);
-% plot(1:1:handles.time, df_fixedF0(17,:));
-% title('Plot of DF/F0 trace- with background substracted');
+%plot(1:1:handles.time, df_fixedF0(12,:));
+%title('Plot of DF/F0 trace- with background substracted');
 % subplot(3,1,3);
 % plot(1:1:handles.time, df_fixedF0WOBack(17,:));
 % title('Plot of DF/F0 trace- with background substracted');
@@ -167,7 +167,7 @@ end
 %     numSpikes(i) = length(locsTemp);
 % end
 %% Cross Correlation method with several spike examples
-load('spikeShapes.mat');
+load('spikeShapes2.mat');
 localMax = 10;
 scale_SD = 1;
 locs3=cell(numCells,1);
@@ -176,9 +176,11 @@ for i = 1:numCells
     meanNormalSpike = meanNormalSpike - mean(meanNormalSpike);
     meanFastSpike = meanFastSpike - mean(meanFastSpike);
     meanFlatSpike = meanFlatSpike - mean(meanFlatSpike);
+    twoSpikes = twoSpikes - mean(twoSpikes);
     [tracexCorrTemp{1}] = normxcorr2(meanNormalSpike, df_fixedF0(i,:));
     [tracexCorrTemp{2}] = normxcorr2(meanFastSpike, df_fixedF0(i,:));
     [tracexCorrTemp{3}] = normxcorr2(meanFlatSpike, df_fixedF0(i,:));
+    [tracexCorrTemp{4}] = normxcorr2(twoSpikes, df_fixedF0(i,:));
     for t = 1:length(tracexCorrTemp)
         tracexCorr = tracexCorrTemp{t};
         thresh = mean(tracexCorr) + std(tracexCorr)*scale_SD;
@@ -193,14 +195,27 @@ for i = 1:numCells
         
         %check threshold of original trace as well
         if ~isempty(locsTemp)
-            threshOrigTrace = mean(df_fixedF0WOBack(i,:));
-            locsTemp(df_fixedF0WOBack(i, locsTemp) < threshOrigTrace) = [];
-            
-
+%             tempTrace = zeros(size(df_fixedF0,2),1);
+%             for j = 1:length(locsTemp)
+%                 loc = locsTemp(j);
+%                 locMin = loc-localMax;
+%                 locMax = loc+localMax;
+%                 if locMin < 1
+%                     locMin = 1;
+%                 end
+%                 if locMax > time
+%                     locMax = time;
+%                 end
+%                 tempTrace(locMin:locMax) = df_fixedF0(i,locMin:locMax);
+%             end
+%             [~, locs'] = findpeaks(tempTrace);
             [locs] = findLocalMax(locsTemp, df_fixedF0, i, time, localMax);
+            %check that all peaks are over 0
+            threshOrigTrace = mean(df_fixedF0WOBack(i,:));
+            locs(df_fixedF0WOBack(i, locs) < threshOrigTrace) = [];
             zeroThresh = 0;
             locs(df_fixedF0(i, locs) < zeroThresh) = [];
-
+            [locs] = removeCloseSpikes(locs);
             locs3{i,1} = sort([locs3{i}, locs], 'ascend');
         end
     end
@@ -209,7 +224,6 @@ end
 for l = 1:length(locs3)
     [locs3{l,1}] = removeCloseSpikes(locs3{l});
     numSpikes(l) = length(locs3{l});
-    
 end
 %% save
 handles.df_fixedF0 = df_fixedF0;
