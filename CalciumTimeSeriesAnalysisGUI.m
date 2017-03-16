@@ -294,6 +294,7 @@ Data.trace = handles.trace;
 Data.df_fixedF0 = handles.df_fixedF0;
 Data.locs = handles.locs;
 Data.numSpikes = handles.numSpikes;
+Data.synchrony = handles.synch;
 save([handles.filename, '.mat'], 'Data');
 
 
