@@ -515,6 +515,7 @@ handles.time = size(handles.trace,2);
 handles.ITimeseries = Data.ITimeseries;
 handles.n = 1;
 handles.load = 1;
+handles.synch = Data.synchrony;
 plotCells(handles);
 plotPeaks(handles);
 display('finished loading');
