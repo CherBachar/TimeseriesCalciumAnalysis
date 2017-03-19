@@ -158,7 +158,8 @@ for l = 1:length(Cells)
     binaryImage(index)=1;
     tempMaskCell(index)=1;
     maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
-    
+    AreaTemp = regionprops(tempMaskCell, 'Area');
+    cellArea(l) = AreaTemp.Area;
     %Get neuropil mask
     tempMaskNeuropil = zeros(handles.sizeImage);
     index = Cells(l).neuropilPixelIdxList;
@@ -170,9 +171,11 @@ for l = 1:length(Cells)
 %     figure;imagesc(maskNeuropilResized(:,:,l));colormap(gray);
 %     title('Neuropil image');
 %     axis off;
-
-
 end
+
+%save area
+handles.cellArea = cellArea;
+
 binaryImageNeuropil = (binaryImageNeuropil - binaryImage) >0;
 binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
 binaryImageNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
@@ -295,6 +298,7 @@ Data.df_fixedF0 = handles.df_fixedF0;
 Data.locs = handles.locs;
 Data.numSpikes = handles.numSpikes;
 Data.synchrony = handles.synch;
+Data.cellArea = handles.cellArea;
 save([handles.filename, '.mat'], 'Data');
 
 
@@ -515,7 +519,14 @@ handles.time = size(handles.trace,2);
 handles.ITimeseries = Data.ITimeseries;
 handles.n = 1;
 handles.load = 1;
-handles.synch = Data.synchrony;
+if (sum(strcmp(fieldnames(Data), 'synchrony')) == 1)
+	handles.synch = Data.synchrony;
+end
+
+if (sum(strcmp(fieldnames(Data), 'cellArea')) == 1)
+	handles.cellArea = Data.cellArea;
+end
+
 plotCells(handles);
 plotPeaks(handles);
 display('finished loading');
