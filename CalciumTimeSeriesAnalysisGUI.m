@@ -22,7 +22,7 @@
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 16-Feb-2017 14:26:51
+% Last Modified by GUIDE v2.5 21-Mar-2017 11:21:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -292,13 +292,20 @@ function Save_Callback(hObject, eventdata, handles)
 Data.filename = handles.filename;
 Data.meanImage = handles.meanImage;
 Data.Cells = handles.Cells;
-Data.ITimeseries = handles.ITimeseries;
-Data.trace = handles.trace;
-Data.df_fixedF0 = handles.df_fixedF0;
-Data.locs = handles.locs;
-Data.numSpikes = handles.numSpikes;
-Data.synchrony = handles.synch;
-Data.cellArea = handles.cellArea;
+
+if (sum(strcmp(fieldnames(handles), 'cellArea')) == 1)
+    Data.cellArea = handles.cellArea;
+end
+if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
+    Data.ITimeseries = handles.ITimeseries;
+    Data.trace = handles.trace;
+    Data.df_fixedF0 = handles.df_fixedF0;
+    Data.locs = handles.locs;
+    Data.numSpikes = handles.numSpikes;
+end
+if (sum(strcmp(fieldnames(handles), 'synch')) == 1)
+   Data.synchrony = handles.synch; 
+end
 save([handles.filename, '.mat'], 'Data');
 
 
@@ -314,8 +321,9 @@ n = str2double(get(hObject,'String'));
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 trace = handles.trace;
-df_fixedF0WOBack = handles.df_fixedF0WOBack;
-
+if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
+    df_fixedF0WOBack = handles.df_fixedF0WOBack;
+end
 locs = handles.locs;
     plot(1:1:handles.time,df_fixedF0(n,:));
     title(['Number of cells detected: ', num2str(length(locs))]);
@@ -333,10 +341,11 @@ title('Plot of raw trace');
 subplot(3,1,2);
 plot(1:1:handles.time, df_fixedF0(handles.n,:));
 title('Plot of DF/F0 trace- with background substracted');
-subplot(3,1,3);
-plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-title('Plot of DF/F0 trace- without background substracted');
-
+if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
+    subplot(3,1,3);
+    plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+    title('Plot of DF/F0 trace- without background substracted');
+end
 guidata(hObject,handles);
 
 
@@ -511,23 +520,50 @@ handles.filename = Data.filename;
 handles.meanImage = Data.meanImage;
 handles.sizeImage = size(handles.meanImage,1);
 handles.Cells = Data.Cells;
-handles.trace = Data.trace;
-handles.df_fixedF0 = Data.df_fixedF0;
-handles.locs = Data.locs;
-handles.numSpikes = Data.numSpikes;
-handles.time = size(handles.trace,2);
-handles.ITimeseries = Data.ITimeseries;
 handles.n = 1;
-handles.load = 1;
-if (sum(strcmp(fieldnames(Data), 'synchrony')) == 1)
-	handles.synch = Data.synchrony;
-end
+
+plotCells(handles);
 
 if (sum(strcmp(fieldnames(Data), 'cellArea')) == 1)
 	handles.cellArea = Data.cellArea;
 end
 
-plotCells(handles);
-plotPeaks(handles);
+if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
+    handles.trace = Data.trace;
+    handles.df_fixedF0 = Data.df_fixedF0;
+    handles.locs = Data.locs;
+    handles.numSpikes = Data.numSpikes;
+    handles.time = size(handles.trace,2);
+    handles.ITimeseries = Data.ITimeseries;
+    handles.load = 1;
+    plotPeaks(handles);
+end
+if (sum(strcmp(fieldnames(Data), 'synchrony')) == 1)
+	handles.synch = Data.synchrony;
+end
+
 display('finished loading');
+guidata(hObject,handles);
+
+
+% --- Executes on button press in calculateArea.
+function calculateArea_Callback(hObject, eventdata, handles)
+% hObject    handle to calculateArea (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+Cells = handles.Cells;
+
+binaryImage = zeros(handles.sizeImage);
+%Cells and neuropil
+for l = 1:length(Cells)
+    %Get cell mask
+    tempMaskCell = zeros(handles.sizeImage);
+    index = Cells(l).PixelIdxList;
+    binaryImage(index)=1;
+    tempMaskCell(index)=1;
+    AreaTemp = regionprops(tempMaskCell, 'Area');
+    cellArea(l) = AreaTemp.Area;
+end
+
+handles.cellArea = cellArea;
 guidata(hObject,handles);
