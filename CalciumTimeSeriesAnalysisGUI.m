@@ -257,7 +257,7 @@ handles.ITimeseries=ITimeseries;
 [handles] = detectPeaks(trace, traceNeuropil, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
-df_fixedF0WOBack = handles.df_fixedF0WOBack;
+%df_fixedF0WOBack = handles.df_fixedF0WOBack;
 locs = handles.locs;
 plot(1:1:handles.time,df_fixedF0(1,:));
 title(['Number of cells detected: ', num2str(length(Cells))]);
@@ -266,16 +266,16 @@ plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
 hold off
 
 handles.n = 1;
-figure;
-subplot(3,1,1);
-plot(1:1:handles.time, trace(handles.n,:));
-title('Plot of raw trace');
-subplot(3,1,2);
-plot(1:1:handles.time, df_fixedF0(handles.n,:));
-title('Plot of DF/F0 trace- with background substracted');
-subplot(3,1,3);
-plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-title('Plot of DF/F0 trace- without background substracted');
+% figure;
+% subplot(3,1,1);
+% plot(1:1:handles.time, trace(handles.n,:));
+% title('Plot of raw trace');
+% subplot(3,1,2);
+% plot(1:1:handles.time, df_fixedF0(handles.n,:));
+% title('Plot of DF/F0 trace- with background substracted');
+% subplot(3,1,3);
+% plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+% title('Plot of DF/F0 trace- without background substracted');
 
 %Find synchrony 
 [handles] = findCaSynchrony(df_fixedF0, handles);
@@ -334,18 +334,18 @@ if ~isempty(locs{n})
 end
 handles.n = n;
 
-figure;
-subplot(3,1,1);
-plot(1:1:handles.time, trace(handles.n,:));
-title('Plot of raw trace');
-subplot(3,1,2);
-plot(1:1:handles.time, df_fixedF0(handles.n,:));
-title('Plot of DF/F0 trace- with background substracted');
-if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
-    subplot(3,1,3);
-    plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-    title('Plot of DF/F0 trace- without background substracted');
-end
+% figure;
+% subplot(3,1,1);
+% plot(1:1:handles.time, trace(handles.n,:));
+% title('Plot of raw trace');
+% subplot(3,1,2);
+% plot(1:1:handles.time, df_fixedF0(handles.n,:));
+% title('Plot of DF/F0 trace- with background substracted');
+% if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
+%     subplot(3,1,3);
+%     plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
+%     title('Plot of DF/F0 trace- without background substracted');
+% end
 guidata(hObject,handles);
 
 
