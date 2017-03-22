@@ -60,7 +60,6 @@ handles.distThresh = 10;
 handles.cellSize = 50;
 handles.con = 4;
 handles.n = 1;
-handles.load = 0;
 
 axes(handles.axes1);
 axis off
@@ -102,7 +101,9 @@ imagesc(I); colormap(gray); title('original image'); axis off;
 handles.sizeImage = size(I,1);
 handles.meanImage = I;
 handles.load = 0;
-
+if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
+    handles = rmfield(handles,'ITimeseries');
+end
 set(handles.imageName, 'String', ['File name: ', filename]);
 
 guidata(hObject,handles);
@@ -129,22 +130,24 @@ function Analyse_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 Cells = handles.Cells;
-inactive = 0;
 
-if handles.load == 0
+%if you have already analysed before or loaded data
+if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
+    ITimeseries =handles.ITimeseries;
+    numLayers = size(ITimeseries,3); 
+%if you didn't analyse or load
+else
     uiwait(msgbox('Load the corresponding time-series tif stack'));
     [filename, filepath] = uigetfile('*.tif*');
     handles.imageStack_fullfilepath = [filepath,filename];
     imgInfo = imfinfo(handles.imageStack_fullfilepath);
     numLayers = length(imgInfo);
-
     for time = 1:numLayers
         ITimeseries(:,:,time) = double(imread(handles.imageStack_fullfilepath, time));
     end
-else
-    ITimeseries =handles.ITimeseries;
-    numLayers = size(ITimeseries,3);
 end
+
+
 sizeITs = size(ITimeseries,1);
 
 binaryImage = zeros(handles.sizeImage);
@@ -158,8 +161,6 @@ for l = 1:length(Cells)
     binaryImage(index)=1;
     tempMaskCell(index)=1;
     maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
-    AreaTemp = regionprops(tempMaskCell, 'Area');
-    cellArea(l) = AreaTemp.Area;
     %Get neuropil mask
     tempMaskNeuropil = zeros(handles.sizeImage);
     index = Cells(l).neuropilPixelIdxList;
@@ -167,14 +168,7 @@ for l = 1:length(Cells)
     tempMaskNeuropil(index)=1;
     tempMaskNeuropil = (tempMaskNeuropil - tempMaskCell) >0;
     maskNeuropilResized(:,:,l) = imresize(tempMaskNeuropil, [sizeITs sizeITs])>0;
-    %Plot neuropil binary image
-%     figure;imagesc(maskNeuropilResized(:,:,l));colormap(gray);
-%     title('Neuropil image');
-%     axis off;
 end
-
-%save area
-handles.cellArea = cellArea;
 
 binaryImageNeuropil = (binaryImageNeuropil - binaryImage) >0;
 binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
@@ -208,13 +202,6 @@ disp('in progress');
 for c = 1:length(Cells)
     maskTempCell = logical(maskResized(:,:,c)); 
     maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
-    %mask3D = repmat(mask,[1,1,numLayers]); %Less efficient
-    %maskOnly = mask3D .* ITimeseries;
-    
-%     figure;imagesc(maskTempNeuropil); colormap(gray);
-%     movegui('west');
-%     figure;imagesc(maskTempCell); colormap(gray);
-%     movegui('east');
     
     for time = 1:numLayers
         tempIT1 = ITimeseries(:,:,time);
@@ -223,32 +210,8 @@ for c = 1:length(Cells)
     end    
     disp(['Cell: ', num2str(c)]);
     
-%     %Plot neuropil traces
-%     subplot(2,1,1);
-%     plot(1:1:handles.time, traceNeuropil(n,:));
-%     title('Plot of Neuropil trace');
-%     subplot(2,1,2);
-%     plot(1:1:handles.time, trace(n,:));
-%     title('Plot of segmented cell');
-%     pause(1);
 end
 
-%Take into account only inactive portions of the neurpil 
-% = anything less the 2*STD of the cell
-if inactive == 1
-    stdCell = std(trace,0, 2);
-    for c = 1:length(Cells)
-        maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
-        for time = 1:numLayers
-            tempIT1 = ITimeseries(:,:,time);
-            tempNeuropil = tempIT1(maskTempNeuropil);
-            tempNeuropil = tempNeuropil(tempIT1(maskTempNeuropil) <= 2*stdCell(c));
-            traceNeuropilInactive(c,time) = mean(mean(tempNeuropil));
-
-        end
-        display(['Neuropil: ', num2str(c)]);
-    end
-end
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
@@ -257,7 +220,7 @@ handles.ITimeseries=ITimeseries;
 [handles] = detectPeaks(trace, traceNeuropil, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
-df_fixedF0WOBack = handles.df_fixedF0WOBack;
+%df_fixedF0WOBack = handles.df_fixedF0WOBack;
 locs = handles.locs;
 plot(1:1:handles.time,df_fixedF0(1,:));
 title(['Number of cells detected: ', num2str(length(Cells))]);
@@ -266,16 +229,6 @@ plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
 hold off
 
 handles.n = 1;
-figure;
-subplot(3,1,1);
-plot(1:1:handles.time, trace(handles.n,:));
-title('Plot of raw trace');
-subplot(3,1,2);
-plot(1:1:handles.time, df_fixedF0(handles.n,:));
-title('Plot of DF/F0 trace- with background substracted');
-subplot(3,1,3);
-plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-title('Plot of DF/F0 trace- without background substracted');
 
 %Find synchrony 
 [handles] = findCaSynchrony(df_fixedF0, handles);
@@ -283,31 +236,6 @@ title('Plot of DF/F0 trace- without background substracted');
 disp('Finished analysis');
 
 guidata(hObject,handles);
-
-% --- Executes on button press in Save.
-function Save_Callback(hObject, eventdata, handles)
-% hObject    handle to Save (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-Data.filename = handles.filename;
-Data.meanImage = handles.meanImage;
-Data.Cells = handles.Cells;
-
-if (sum(strcmp(fieldnames(handles), 'cellArea')) == 1)
-    Data.cellArea = handles.cellArea;
-end
-if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
-    Data.ITimeseries = handles.ITimeseries;
-    Data.trace = handles.trace;
-    Data.df_fixedF0 = handles.df_fixedF0;
-    Data.locs = handles.locs;
-    Data.numSpikes = handles.numSpikes;
-end
-if (sum(strcmp(fieldnames(handles), 'synch')) == 1)
-   Data.synchrony = handles.synch; 
-end
-save([handles.filename, '.mat'], 'Data');
-
 
 
 function CellNum_Callback(hObject, eventdata, handles)
@@ -320,13 +248,12 @@ function CellNum_Callback(hObject, eventdata, handles)
 n = str2double(get(hObject,'String'));
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
-trace = handles.trace;
-if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
-    df_fixedF0WOBack = handles.df_fixedF0WOBack;
-end
+%trace = handles.trace;
 locs = handles.locs;
-    plot(1:1:handles.time,df_fixedF0(n,:));
-    title(['Number of cells detected: ', num2str(length(locs))]);
+
+%Plot in gui
+plot(1:1:handles.time,df_fixedF0(n,:));
+title(['Number of cells detected: ', num2str(length(locs))]);
 if ~isempty(locs{n})
     hold on 
     plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
@@ -334,18 +261,6 @@ if ~isempty(locs{n})
 end
 handles.n = n;
 
-figure;
-subplot(3,1,1);
-plot(1:1:handles.time, trace(handles.n,:));
-title('Plot of raw trace');
-subplot(3,1,2);
-plot(1:1:handles.time, df_fixedF0(handles.n,:));
-title('Plot of DF/F0 trace- with background substracted');
-if (sum(strcmp(fieldnames(handles), 'df_fixedF0WOBack')) == 1)
-    subplot(3,1,3);
-    plot(1:1:handles.time, df_fixedF0WOBack(handles.n,:));
-    title('Plot of DF/F0 trace- without background substracted');
-end
 guidata(hObject,handles);
 
 
@@ -368,6 +283,54 @@ function Contrast_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 imcontrast(gca);
+
+
+
+
+% --- Executes on button press in AddCells.
+function AddCells_Callback(hObject, eventdata, handles)
+% hObject    handle to AddCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+Cells = handles.Cells;
+%Get new cells
+[xAdd,yAdd] = ginput;
+locationsAdd = [xAdd,yAdd];
+if ~isempty(locationsAdd)
+    locationsAdd = addPoints(locationsAdd, handles.meanImage);
+    
+    [newCells] = segmentCells(handles.meanImage, handles, locationsAdd);
+    Cells = [Cells; newCells];
+    handles.Cells = Cells;
+    plotCells(handles);
+end
+guidata(hObject,handles);
+
+
+% --- Executes on button press in RemoveCells.
+function RemoveCells_Callback(hObject, eventdata, handles)
+% hObject    handle to RemoveCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%Read cell locations
+Cells = handles.Cells;
+for c = 1:length(Cells)
+    cellLocations(c,:) = Cells(c).Centroid;
+end
+
+%Get cells to remove
+[xRemove,yRemove] = ginput;
+if ~isempty(xRemove)
+    [~, removedCells] = removeCells(cellLocations, xRemove, yRemove);
+    
+    Cells(removedCells) = [];
+    handles.Cells = Cells;
+
+    plotCells(handles);
+end
+
+guidata(hObject,handles);
 
 
 % --- Executes on button press in AddPeaks.
@@ -430,82 +393,24 @@ if isfield(handles, 'locs')
     guidata(hObject,handles);
 end
 
-
-% --- Executes on button press in AddCells.
-function AddCells_Callback(hObject, eventdata, handles)
-% hObject    handle to AddCells (see GCBO)
+% --- Executes on button press in Save.
+function Save_Callback(hObject, eventdata, handles)
+% hObject    handle to Save (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-Cells = handles.Cells;
-%Get new cells
-[xAdd,yAdd] = ginput;
-locationsAdd = [xAdd,yAdd];
-if ~isempty(locationsAdd)
-    locationsAdd = addPoints(locationsAdd, handles.meanImage);
-    
-    [newCells] = segmentCells(handles.meanImage, handles, locationsAdd);
-    Cells = [Cells; newCells];
-    handles.Cells = Cells;
-    plotCells(handles);
+Data.filename = handles.filename;
+Data.meanImage = handles.meanImage;
+Data.Cells = handles.Cells;
+
+if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
+    Data.ITimeseries = handles.ITimeseries;
+    Data.trace = handles.trace;
+    Data.df_fixedF0 = handles.df_fixedF0;
+    Data.locs = handles.locs;
+    Data.numSpikes = handles.numSpikes;
+    Data.synchrony = handles.synch; 
 end
-guidata(hObject,handles);
-
-
-% --- Executes on button press in RemoveCells.
-function RemoveCells_Callback(hObject, eventdata, handles)
-% hObject    handle to RemoveCells (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-%Read cell locations
-Cells = handles.Cells;
-for c = 1:length(Cells)
-    cellLocations(c,:) = Cells(c).Centroid;
-end
-
-%Get cells to remove
-[xRemove,yRemove] = ginput;
-if ~isempty(xRemove)
-    [~, removedCells] = removeCells(cellLocations, xRemove, yRemove);
-    
-    Cells(removedCells) = [];
-    handles.Cells = Cells;
-
-    plotCells(handles);
-end
-
-guidata(hObject,handles);
-
-
-% --- Executes on button press in DrawBox.
-function DrawBox_Callback(hObject, eventdata, handles)
-% hObject    handle to DrawBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-image = handles.meanImage;
-sizeImage = handles.sizeImage;
-box = getrect(); %box for neuropil
-x1 = round(box(1));
-y1 = round(box(2));
-x2 = round(box(3) + x1);
-y2 = round(box(4) + y1);
-if x1 < 1
-    x1 = 1;
-end
-if y1 < 1 
-    y1 = 1;
-end
-if x2 > sizeImage
-    x2 = round(sizeImage);
-end
-if y2 > sizeImage
-    y2 = round(sizeImage);
-end
-
-neuropil = mean(mean(image(y1:y2, x1:x2)));
-disp('done');
-    
+save([handles.filename, '.mat'], 'Data');
 
 
 % --- Executes on button press in loadData.
@@ -524,10 +429,6 @@ handles.n = 1;
 
 plotCells(handles);
 
-if (sum(strcmp(fieldnames(Data), 'cellArea')) == 1)
-	handles.cellArea = Data.cellArea;
-end
-
 if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
     handles.trace = Data.trace;
     handles.df_fixedF0 = Data.df_fixedF0;
@@ -535,35 +436,10 @@ if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
     handles.numSpikes = Data.numSpikes;
     handles.time = size(handles.trace,2);
     handles.ITimeseries = Data.ITimeseries;
-    handles.load = 1;
     plotPeaks(handles);
-end
-if (sum(strcmp(fieldnames(Data), 'synchrony')) == 1)
-	handles.synch = Data.synchrony;
+    handles.synch = Data.synchrony;
 end
 
 display('finished loading');
 guidata(hObject,handles);
 
-
-% --- Executes on button press in calculateArea.
-function calculateArea_Callback(hObject, eventdata, handles)
-% hObject    handle to calculateArea (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-Cells = handles.Cells;
-
-binaryImage = zeros(handles.sizeImage);
-%Cells and neuropil
-for l = 1:length(Cells)
-    %Get cell mask
-    tempMaskCell = zeros(handles.sizeImage);
-    index = Cells(l).PixelIdxList;
-    binaryImage(index)=1;
-    tempMaskCell(index)=1;
-    AreaTemp = regionprops(tempMaskCell, 'Area');
-    cellArea(l) = AreaTemp.Area;
-end
-
-handles.cellArea = cellArea;
-guidata(hObject,handles);

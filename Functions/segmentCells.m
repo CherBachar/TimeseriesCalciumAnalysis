@@ -92,7 +92,7 @@ binaryImage = bwmorph(binaryImage,'close',inf);
 binaryImage = bwareaopen(binaryImage,100,con);
 
 %remove high elonaged structures using Eccentricity
-Cells=regionprops(binaryImage, 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
+Cells=regionprops(binaryImage, 'Area', 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
 
 % for i = 1:length(Cells)
 %     boundingBox(i,:) = Cells(i).BoundingBox;
