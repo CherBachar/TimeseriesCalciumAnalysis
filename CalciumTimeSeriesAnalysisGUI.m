@@ -22,7 +22,7 @@
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 21-Mar-2017 11:21:28
+% Last Modified by GUIDE v2.5 19-Apr-2017 14:11:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -260,6 +260,7 @@ if ~isempty(locs{n})
     hold off
 end
 handles.n = n;
+plotCells(handles);
 
 guidata(hObject,handles);
 
@@ -302,7 +303,7 @@ if ~isempty(locationsAdd)
     [newCells] = segmentCells(handles.meanImage, handles, locationsAdd);
     Cells = [Cells; newCells];
     handles.Cells = Cells;
-    plotCells(handles);
+    %plotCells(handles);
 end
 guidata(hObject,handles);
 
@@ -326,8 +327,7 @@ if ~isempty(xRemove)
     
     Cells(removedCells) = [];
     handles.Cells = Cells;
-
-    plotCells(handles);
+    %plotCells(handles);
 end
 
 guidata(hObject,handles);
@@ -442,4 +442,15 @@ end
 
 display('finished loading');
 guidata(hObject,handles);
+
+
+
+
+
+% --- Executes on button press in plotCells.
+function plotCells_Callback(hObject, eventdata, handles)
+% hObject    handle to plotCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+plotCells(handles);
 
