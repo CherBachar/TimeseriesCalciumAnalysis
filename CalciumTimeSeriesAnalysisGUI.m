@@ -206,6 +206,7 @@ for c = 1:length(Cells)
     for time = 1:numLayers
         tempIT1 = ITimeseries(:,:,time);
         trace(c,time) = mean(mean(tempIT1(maskTempCell)));
+        sumPixels(c, time) = sum(sum(tempIT1(maskTempCell)));
         traceNeuropil(c,time) = mean(mean(tempIT1(maskTempNeuropil)));
     end    
     disp(['Cell: ', num2str(c)]);
@@ -215,13 +216,18 @@ end
 handles.trace = trace;
 handles.time = numLayers;
 handles.ITimeseries=ITimeseries;
-
+handles.sumPixels = sumPixels;
 % Detect peaks on traces
 [handles] = detectPeaks(trace, traceNeuropil, handles);
 axes(handles.axes3);
 df_fixedF0 = handles.df_fixedF0;
 %df_fixedF0WOBack = handles.df_fixedF0WOBack;
 locs = handles.locs;
+for c = 1:length(Cells)
+    templocs = locs{c};
+    peaksMag{c,1} = df_fixedF0(c,templocs);
+end
+handles.peaksMag = peaksMag;
 plot(1:1:handles.time,df_fixedF0(1,:));
 title(['Number of cells detected: ', num2str(length(Cells))]);
 hold on
@@ -247,20 +253,22 @@ function CellNum_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of CellNum as a double
 n = str2double(get(hObject,'String'));
 axes(handles.axes3);
-df_fixedF0 = handles.df_fixedF0;
+df_F0 = handles.df_fixedF0;
 %trace = handles.trace;
 locs = handles.locs;
 
 %Plot in gui
-plot(1:1:handles.time,df_fixedF0(n,:));
+plot(1:1:handles.time,df_F0(n,:));
 title(['Number of cells detected: ', num2str(length(locs))]);
 if ~isempty(locs{n})
     hold on 
-    plot(locs{n},df_fixedF0(n,locs{n}), 'r*');
+    plot(locs{n},df_F0(n,locs{n}), 'r*');
     hold off
 end
 handles.n = n;
 plotCells(handles);
+
+
 
 guidata(hObject,handles);
 
@@ -350,8 +358,8 @@ if isfield(handles, 'locs')
     currLocs = [currLocs, round(xAdd)];
     locs{cell,1} = currLocs;
     handles.locs = locs;
-    handles.numSpikes(cell) = length(currLocs);
-
+    handles.numSpikes(cell) = length(currLocs); %locations of peaks
+    handles.peaksMag(cell) = df_fixedF0(cell,locs(cell));%magnification of peaks
     %Plot new pooints
     axes(handles.axes3);
     plot(1:1:handles.time,df_fixedF0(cell,:));
@@ -409,6 +417,7 @@ if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
     Data.locs = handles.locs;
     Data.numSpikes = handles.numSpikes;
     Data.synchrony = handles.synch; 
+    Data.peaksMag = handles.peaksMag;
 end
 save([handles.filename, '.mat'], 'Data');
 
@@ -438,6 +447,9 @@ if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
     handles.ITimeseries = Data.ITimeseries;
     plotPeaks(handles);
     handles.synch = Data.synchrony;
+    if (sum(strcmp(fieldnames(Data), 'peaksMag')) == 1)
+        handles.peaksMag = Data.peaksMag;
+    end
 end
 
 display('finished loading');
