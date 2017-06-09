@@ -11,41 +11,7 @@ Cells = handles.Cells;
 sumPixels = handles.sumPixels;
 tau1 = 10;
 tau2 = 10;
-%% df/f calculation from papaer: In vivo two-photon imaging of sensory-evoked dendritic calcium signals in cortical neurons
-%1.Calculate the mean fluorescence F(t) of a region of interest (ROI) for each time point t
-Ft = zeros(numCells, time);
-for c = 1:numCells
-    cellArea = Cells(c).Area;
-    Ft(c,:) = (sumPixels(c, :) /cellArea);
-end
 
-%2.Calculate the time-dependent baseline F0(t )
-F0 = zeros(numCells, time);
-traceSmooth = zeros(numCells, time);
-%smoothing
-for i = 1:numCells
-    traceSmooth(i,:) = smooth(Ft(i,:), 'loess');
-end
-
-for t = 1:time
-    t1 = t-tau1;
-    if t1 < 1
-        t1 = 1;
-    end
-    F0(:, t) = min(traceSmooth(:,t1:t),[],2);
-end
-
-%3.Calculate the relative change of fluorescence signal R(t) from F(t) and F0(t ) =
-Rt = (Ft - F0) ./F0;
-
-%4.exponentially weighted moving average- the first tau2 is always NaN so
-%correction is made below
-for c = 1:numCells
-    df_F0(c,:) = tsmovavg(Rt(c,:),'e',tau2, 2);
-end
-df_F0_mat = repmat(df_F0(:,tau2), [1, tau2-1]);
-
-df_F0(:,1:tau2-1) = df_F0_mat;
 %% df/d calculation
 sort_trace_by_F = sort(trace, 2, 'ascend');
 for x = 1:numCells
@@ -77,6 +43,77 @@ for i = 1:numCells
 end
 min10mat = repmat(min_10, [1, time]);
 df_fixedF0Back = ((trace - traceNeuropilSmooth)-min10mat)./min10mat;
+
+
+%% df/f calculation from papaer: In vivo two-photon imaging of sensory-evoked dendritic calcium signals in cortical neurons
+%1.Calculate the mean fluorescence F(t) of a region of interest (ROI) for each time point t
+Ft = zeros(numCells, time);
+for c = 1:numCells
+    cellArea = Cells(c).Area;
+    Ft(c,:) = (sumPixels(c, :) /cellArea);
+end
+
+
+%2.Calculate the time-dependent baseline F0(t )
+F0 = zeros(numCells, time);
+traceSmooth = zeros(numCells, time);
+%smoothing
+for i = 1:numCells
+    traceSmooth(i,:) = smooth(Ft(i,:), 'loess');
+end
+
+for t = 1:time
+    t1 = t-tau1;
+    if t1 < 1
+        t1 = 1;
+    end
+    F0(:, t) = min(traceSmooth(:,t1:t),[],2);
+end
+
+%3.Calculate the relative change of fluorescence signal R(t) from F(t) and F0(t ) =
+Rt = (Ft - F0) ./F0;
+
+%4.exponentially weighted moving average- the first tau2 is always NaN so
+%correction is made below
+for c = 1:numCells
+    df_F0(c,:) = tsmovavg(Rt(c,:),'e',tau2, 2);
+end
+df_F0_mat = repmat(df_F0(:,tau2), [1, tau2-1]);
+
+df_F0(:,1:tau2-1) = df_F0_mat;
+
+%% new trace - neuropil
+
+df_F0_neuropil = df_F0 - traceNeuropilSmooth;
+
+% %2.Calculate the time-dependent baseline F0(t )
+% F0 = zeros(numCells, time);
+% traceSmooth = zeros(numCells, time);
+% %smoothing
+% for i = 1:numCells
+%     traceSmooth(i,:) = smooth(Ftneuropil(i,:), 'loess');
+% end
+% 
+% for t = 1:time
+%     t1 = t-tau1;
+%     if t1 < 1
+%         t1 = 1;
+%     end
+%     F0(:, t) = min(traceSmooth(:,t1:t),[],2);
+% end
+% 
+% %3.Calculate the relative change of fluorescence signal R(t) from F(t) and F0(t ) =
+% Rt = (Ftneuropil - F0) ./F0;
+% 
+% %4.exponentially weighted moving average- the first tau2 is always NaN so
+% %correction is made below
+% df_F0_neuropil = zeros(numCells, time);
+% for c = 1:numCells
+%     df_F0_neuropil(c,:) = tsmovavg(Rt(c,:),'e',tau2, 2);
+% end
+% df_F0_mat = repmat(df_F0_neuropil(:,tau2), [1, tau2-1]);
+% 
+% df_F0_neuropil(:,1:tau2-1) = df_F0_mat;
 
 %% Cross Correlation method with several spike examples
 load('spikeShapes2.mat');
@@ -128,21 +165,24 @@ end
 
 %% Plot
 figure;
-subplot(3,1,1);
+subplot(4,1,1);
 plot(df_fixedF0(1, :));
 title('Trace for min10 Df/F0')
 
-subplot(3,1,2);
+subplot(4,1,2);
 plot(df_fixedF0Back(1, :));
 title('Trace for min10 Df/F0 neuropil subtracted')
 
-subplot(3,1,3);
+subplot(4,1,3);
 plot(df_F0(1, :));
 hold on
 plot(locs3{1},df_F0(1,locs3{1}), 'r*');
 title('New trace');
 hold off
 
+subplot(4,1,4);
+plot(df_F0_neuropil(1, :));
+title('New trace -neuropil');
 
 %% save
 handles.df_fixedF0 = traceChosen;
