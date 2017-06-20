@@ -453,6 +453,7 @@ Data.filename = handles.filename;
 Data.meanImage = handles.meanImage;
 Data.Cells = handles.Cells;
 Data.activeCells = handles.activeCells;
+Data.percentActive = handles.percentActive;
 
 if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
     Data.ITimeseries = handles.ITimeseries;
@@ -481,6 +482,7 @@ handles.sizeImage = size(handles.meanImage,1);
 handles.Cells = Data.Cells;
 handles.n = 1;
 handles.activeCells = Data.activeCells;
+handles.percentActive = Data.percentActive;
 
 
 if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
