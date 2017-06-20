@@ -4,7 +4,7 @@ Plot = 0;
 cellSize = handles.cellSize;
 neuropilSize = 50;
 con = handles.con;
-sizeImage = handles.sizeImage;
+sizeImage = size(I,1);
 numCellLocs = size(cellLocations,1);
 eccThresh = 0.95;
 

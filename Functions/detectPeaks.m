@@ -163,27 +163,6 @@ for l = 1:length(locs3)
     numSpikes(l) = length(locs3{l});
 end
 
-%% Plot
-figure;
-subplot(4,1,1);
-plot(df_fixedF0(1, :));
-title('Trace for min10 Df/F0')
-
-subplot(4,1,2);
-plot(df_fixedF0Back(1, :));
-title('Trace for min10 Df/F0 neuropil subtracted')
-
-subplot(4,1,3);
-plot(df_F0(1, :));
-hold on
-plot(locs3{1},df_F0(1,locs3{1}), 'r*');
-title('New trace');
-hold off
-
-subplot(4,1,4);
-plot(df_F0_neuropil(1, :));
-title('New trace -neuropil');
-
 %% save
 handles.df_fixedF0 = traceChosen;
 %handles.df_fixedF0WOBack=df_fixedF0WOBack;

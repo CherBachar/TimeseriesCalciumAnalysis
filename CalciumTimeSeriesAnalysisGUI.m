@@ -22,7 +22,7 @@
 
 % Edit the above text to modify the response to help CalciumTimeSeriesAnalysisGUI
 
-% Last Modified by GUIDE v2.5 19-Apr-2017 14:11:37
+% Last Modified by GUIDE v2.5 15-Jun-2017 15:33:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -89,10 +89,29 @@ function Load_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %uiwait(msgbox('Load a mean image (.tif)'));
+
 [filename, filepath] = uigetfile('*.tif*');
 handles.filename = filename;
-handles.meanImage_fullfilepath = [filepath,filename];
-I = double(imread(handles.meanImage_fullfilepath));
+handles.Image_fullfilepath = [filepath,filename];
+
+set(handles.imageName, 'String', ['File name: ', filename(1:end-4)]);
+
+I = double(imread(handles.Image_fullfilepath));
+sizeI = size(I);
+imgInfo = imfinfo(handles.Image_fullfilepath);
+numLayers = length(imgInfo);
+
+%if you have already analysed before or loaded data
+% if numLayers > 1
+%     ITimeseries = zeros(sizeI(1),sizeI(2),numLayers);
+%     for time = 1:numLayers
+%         ITimeseries(:,:,time) = double(imread(handles.Image_fullfilepath, time));
+%     end
+%     I = mean(ITimeseries,3);
+%     handles.ITimeseries = ITimeseries;
+% end
+% 
+
 axes(handles.axes1);
 imagesc(I); colormap(gray); title('original image'); axis off;
 axes(handles.axes2);
@@ -104,8 +123,6 @@ handles.load = 0;
 if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
     handles = rmfield(handles,'ITimeseries');
 end
-set(handles.imageName, 'String', ['File name: ', filename]);
-
 guidata(hObject,handles);
 
 
@@ -114,24 +131,10 @@ function SegmentCells_Callback(hObject, eventdata, handles)
 % hObject    handle to SegmentCells (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-[cellLocations] = detectPoints(handles.meanImage, handles);
-[Cells] = segmentCells(handles.meanImage, handles, cellLocations);
-handles.Cells = Cells;
-
-plotCells(handles);
-
-guidata(hObject,handles);
-
-
-% --- Executes on button press in Analyse.
-function Analyse_Callback(hObject, eventdata, handles)
-% hObject    handle to Analyse (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-Cells = handles.Cells;
-
 %if you have already analysed before or loaded data
+%if you have already analysed before or loaded data
+
+%% load timeseries image
 if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
     ITimeseries =handles.ITimeseries;
     numLayers = size(ITimeseries,3); 
@@ -147,9 +150,15 @@ else
     end
 end
 
+handles.ITimeseries = ITimeseries;
+%% segmentation of all cells
+[cellLocations] = detectPoints(handles.meanImage, handles);
+[Cells] = segmentCells(handles.meanImage, handles, cellLocations);
+handles.Cells = Cells;
 
+
+%% get cell masks
 sizeITs = size(ITimeseries,1);
-
 binaryImage = zeros(handles.sizeImage);
 binaryImageNeuropil = zeros(handles.sizeImage);
 
@@ -161,88 +170,114 @@ for l = 1:length(Cells)
     binaryImage(index)=1;
     tempMaskCell(index)=1;
     maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
-    %Get neuropil mask
-    tempMaskNeuropil = zeros(handles.sizeImage);
-    index = Cells(l).neuropilPixelIdxList;
-    binaryImageNeuropil(index)=1;
-    tempMaskNeuropil(index)=1;
-    tempMaskNeuropil = (tempMaskNeuropil - tempMaskCell) >0;
-    maskNeuropilResized(:,:,l) = imresize(tempMaskNeuropil, [sizeITs sizeITs])>0;
 end
 
-binaryImageNeuropil = (binaryImageNeuropil - binaryImage) >0;
 binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
-binaryImageNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
+binaryNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
 
-%Plot neuropil binary image
-figure;imagesc(binaryImageResized);colormap(gray);
-title('Cell image');
-axis off;
-%Plot cell binary image
-figure;imagesc(binaryImageNeuropilResized);colormap(gray);
-title('Neuropil image');
-axis off;
+%% get active cells
+%get variance through time series image
+ITimeseriesSTD = std(ITimeseries,0, 3);
+
+handles.ITimeseriesSTD = ITimeseriesSTD;
+handles.maskResized = maskResized;
+
+handles = findActiveCells(handles);
 
 
-%Plot segmented cells on timeseries image
-figure;imagesc(mean(ITimeseries,3));colormap(gray);
-title('Segmentation on time series mean image');
-axis off;
-hold on;
 
-[B,L] = bwboundaries(binaryImageResized,'noholes');
-for k = 1:length(B)
-   boundary = B{k};
-   plot(boundary(:,2), boundary(:,1), 'w', 'LineWidth', 2)
+%% Plot cells
+plotCells(handles);
+guidata(hObject,handles);
+
+
+% --- Executes on button press in Analyse.
+function Analyse_Callback(hObject, eventdata, handles)
+% hObject    handle to Analyse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%% Get cells and neuropil
+
+%Cells
+%Cells = handles.Cells;
+ITimeseriesSTD =handles.ITimeseriesSTD;
+ITimeseries = handles.ITimeseries;
+time = size(ITimeseries,3);
+activeCells = handles.activeCells;
+
+
+traceNeuropil = zeros(time,1);
+
+AllCellMask = zeros(size(ITimeseriesSTD,1),size(ITimeseriesSTD,1));
+%Cells 
+for l = 1:length(activeCells)
+    %Get cell mask
+    tempMaskCell = zeros(size(ITimeseriesSTD,1),size(ITimeseriesSTD,1));
+    index = activeCells(l).PixelIdxList;
+    tempMaskCell(index)=1;
+    AllCellMask(index)=1;
+    activeCellsMask(:,:,l) = tempMaskCell;
 end
-hold off;
+%Neuropil
+neuropilMask = ITimeseriesSTD > mean(mean(ITimeseriesSTD));
+neuropilMask = (neuropilMask - AllCellMask) >0;
+handles.neuropilMask = neuropilMask;
+
+%plots
+figure;imagesc(AllCellMask);colormap(gray);
+title('Cell mask image');
+axis off
+figure;imagesc(neuropilMask);colormap(gray);
+title('Neuropil mask image');
+axis off
 
 
-disp('in progress');
-for c = 1:length(Cells)
-    maskTempCell = logical(maskResized(:,:,c)); 
-    maskTempNeuropil = logical(maskNeuropilResized(:,:,c)); 
-    
-    for time = 1:numLayers
-        tempIT1 = ITimeseries(:,:,time);
-        trace(c,time) = mean(mean(tempIT1(maskTempCell)));
-        sumPixels(c, time) = sum(sum(tempIT1(maskTempCell)));
-        traceNeuropil(c,time) = mean(mean(tempIT1(maskTempNeuropil)));
-    end    
+%% get traces
+for c = 1:length(activeCells)
+    maskTempCell = logical(activeCellsMask(:,:,c)); 
+    if c == 1
+        maskTempNeuropil = logical(neuropilMask); 
+    end
+    for t = 1:time
+        tempIT1 = ITimeseries(:,:,t);
+        trace(c,t) = mean(mean(tempIT1(maskTempCell)));
+        sumPixels(c, t) = sum(sum(tempIT1(maskTempCell)));
+        if c == 1
+            traceNeuropil(t) = mean(mean(tempIT1(maskTempNeuropil)));
+            %sumPixels_neuropil(t) = sum(sum(tempIT1(maskTempNeuropil)));
+        end
+    end
     disp(['Cell: ', num2str(c)]);
     
 end
 
 handles.trace = trace;
-handles.time = numLayers;
-handles.ITimeseries=ITimeseries;
+handles.time = time;
 handles.sumPixels = sumPixels;
-% Detect peaks on traces
-[handles] = detectPeaks(trace, traceNeuropil, handles);
-axes(handles.axes3);
-df_fixedF0 = handles.df_fixedF0;
-%df_fixedF0WOBack = handles.df_fixedF0WOBack;
-locs = handles.locs;
-for c = 1:length(Cells)
-    templocs = locs{c};
-    peaksMag{c,1} = df_fixedF0(c,templocs);
-end
-handles.peaksMag = peaksMag;
-plot(1:1:handles.time,df_fixedF0(1,:));
-title(['Number of cells detected: ', num2str(length(Cells))]);
-hold on
-plot(locs{1},df_fixedF0(1,locs{1}), 'r*');
-hold off
-
+handles.traceNeuropil = traceNeuropil;
+handles.activeCellsMask = activeCellsMask;
+%% Get df_F0 trace
+[df_F0] = df_F0Trace(trace, handles);
+handles.df_F0 = df_F0;
+% [df_F0_Neuropil] = df_F0Trace(traceNeuropil,handles);
+% handles.df_F0_Neuropil = df_F0_Neuropil;
+%% Find synchrony 
+[handles] = activityIntegral(handles);
 handles.n = 1;
+plotTrace(handles);
 
-%Find synchrony 
-[handles] = findCaSynchrony(df_fixedF0, handles);
+figure;imagesc(handles.corrMatrix);colormap(gray);
+colorbar;
+title('Correlation matrix between active cells');
+
+
+%% Plot line scan
+plotLineScan(handles, activeCellsMask);
 
 disp('Finished analysis');
 
 guidata(hObject,handles);
-
 
 function CellNum_Callback(hObject, eventdata, handles)
 % hObject    handle to CellNum (see GCBO)
@@ -253,22 +288,20 @@ function CellNum_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of CellNum as a double
 n = str2double(get(hObject,'String'));
 axes(handles.axes3);
-df_F0 = handles.df_fixedF0;
+df_F0 = handles.df_F0;
 %trace = handles.trace;
-locs = handles.locs;
 
 %Plot in gui
 plot(1:1:handles.time,df_F0(n,:));
-title(['Number of cells detected: ', num2str(length(locs))]);
-if ~isempty(locs{n})
-    hold on 
-    plot(locs{n},df_F0(n,locs{n}), 'r*');
-    hold off
-end
+title(['Number of active cells detected: ', num2str(length(handles.activeCells))]);
+% if ~isempty(locs{n})
+%     locs = handles.locs;
+%     hold on 
+%     plot(locs{n},df_F0(n,locs{n}), 'r*');
+%     hold off
+% end
 handles.n = n;
-plotCells(handles);
-
-
+plotTrace(handles);
 
 guidata(hObject,handles);
 
@@ -341,65 +374,75 @@ end
 guidata(hObject,handles);
 
 
-% --- Executes on button press in AddPeaks.
-function AddPeaks_Callback(hObject, eventdata, handles)
-% hObject    handle to AddPeaks (see GCBO)
+% --- Executes on button press in addActiveCells.
+function addActiveCells_Callback(hObject, eventdata, handles)
+% hObject    handle to addActiveCells (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isfield(handles, 'locs')
-    locs = handles.locs;
-    df_fixedF0 = handles.df_fixedF0;
-    cell = handles.n;
-    currLocs = locs{cell};
-    [xAdd,~] = ginput;
-    
-    [xAdd] = localPeakDetector(round(xAdd), handles);
-    
-    currLocs = [currLocs, round(xAdd)];
-    locs{cell,1} = currLocs;
-    handles.locs = locs;
-    handles.numSpikes(cell) = length(currLocs); %locations of peaks
-    handles.peaksMag(cell) = df_fixedF0(cell,locs(cell));%magnification of peaks
-    %Plot new pooints
-    axes(handles.axes3);
-    plot(1:1:handles.time,df_fixedF0(cell,:));
-    title(['Number of cells detected: ', num2str(length(locs))]);
-    hold on
-    plot(locs{cell},df_fixedF0(cell,locs{cell}), 'r*');
-    hold off
+%Read cell locations
+activeCellSize = 20;
+Cells = handles.activeCells;
+ITimeseriesSTD = handles.ITimeseriesSTD;
+imageSize = size(ITimeseriesSTD,1);
+newCellsImage = zeros(imageSize,imageSize);
 
-    guidata(hObject,handles);
-end
-
-% --- Executes on button press in RemovePeaks.
-function RemovePeaks_Callback(hObject, eventdata, handles)
-% hObject    handle to RemovePeaks (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isfield(handles, 'locs')
-    locs = handles.locs;
-    df_fixedF0 = handles.df_fixedF0;
-    cell = handles.n;
-    currLocs = locs{cell};
-    [yRemove,~] = ginput;
-    for i = 1:length(yRemove)
-        [~, tempRemove(i)] = min(abs(currLocs - yRemove(i)));
+%% Get new cells
+[xAdd,yAdd] = ginput;
+for i = 1:length(xAdd)
+    centroid = [xAdd(i), yAdd(i)];
+    x1 = round(centroid(1) - round(activeCellSize/2));
+    x2 = round(centroid(1) + round(activeCellSize/2));
+    y1 = round(centroid(2) - round(activeCellSize/2));
+    y2 = round(centroid(2) + round(activeCellSize/2));
+    %Check if out of boundary
+    if x2 > imageSize
+        x2 = imageSize;
     end
-    currLocs(tempRemove) = [];
-    locs{cell,1} = currLocs;
-    handles.locs = locs;
-    handles.numSpikes(cell) = length(currLocs);
+    if x1 < 1
+        x1 = 1;
+    end
+    if y2 > imageSize
+        y2 = imageSize;
+    end
+    if y1 < 1
+        y1 = 1;
+    end        
     
-    %Plot new pooints
-    axes(handles.axes3);
-    plot(1:1:handles.time,df_fixedF0(cell,:));
-    title(['Number of cells detected: ', num2str(length(locs))]);
-    hold on
-    plot(locs{cell},df_fixedF0(cell,locs{cell}), 'r*');
-    hold off
+    newCellsImage(y1:y2,x1:x2) = 1;
 
-    guidata(hObject,handles);
 end
+
+newCells = regionprops(newCellsImage>0, 'Area', 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
+
+Cells = [Cells; newCells];
+
+handles.activeCells = Cells;
+guidata(hObject,handles);
+
+
+% --- Executes on button press in removeActiveCells.
+function removeActiveCells_Callback(hObject, eventdata, handles)
+% hObject    handle to removeActiveCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+Cells = handles.activeCells;
+for c = 1:length(Cells)
+    cellLocations(c,:) = Cells(c).Centroid;
+end
+
+%Get cells to remove
+[xRemove,yRemove] = ginput;
+if ~isempty(xRemove)
+    [~, removedCells] = removeCells(cellLocations, xRemove, yRemove);
+    
+    Cells(removedCells) = [];
+    handles.activeCells = Cells;
+    %plotCells(handles);
+end
+
+guidata(hObject,handles);
+
+
 
 % --- Executes on button press in Save.
 function Save_Callback(hObject, eventdata, handles)
@@ -409,15 +452,17 @@ function Save_Callback(hObject, eventdata, handles)
 Data.filename = handles.filename;
 Data.meanImage = handles.meanImage;
 Data.Cells = handles.Cells;
+Data.activeCells = handles.activeCells;
 
 if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
     Data.ITimeseries = handles.ITimeseries;
     Data.trace = handles.trace;
-    Data.df_fixedF0 = handles.df_fixedF0;
-    Data.locs = handles.locs;
-    Data.numSpikes = handles.numSpikes;
-    Data.synchrony = handles.synch; 
-    Data.peaksMag = handles.peaksMag;
+    Data.df_F0 = handles.df_F0;
+    Data.activity = handles.activity;
+    Data.corrMatrix = handles.corrMatrix;
+    Data.ITimeseriesSTD = handles.ITimeseriesSTD;
+    Data.traceNeuropil = handles.traceNeuropil;
+
 end
 save([handles.filename, '.mat'], 'Data');
 
@@ -435,28 +480,25 @@ handles.meanImage = Data.meanImage;
 handles.sizeImage = size(handles.meanImage,1);
 handles.Cells = Data.Cells;
 handles.n = 1;
+handles.activeCells = Data.activeCells;
 
-plotCells(handles);
 
 if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
     handles.trace = Data.trace;
-    handles.df_fixedF0 = Data.df_fixedF0;
-    handles.locs = Data.locs;
-    handles.numSpikes = Data.numSpikes;
+    handles.df_F0 = Data.df_F0;
     handles.time = size(handles.trace,2);
     handles.ITimeseries = Data.ITimeseries;
-    plotPeaks(handles);
-    handles.synch = Data.synchrony;
-    if (sum(strcmp(fieldnames(Data), 'peaksMag')) == 1)
-        handles.peaksMag = Data.peaksMag;
-    end
+    handles.ITimeseriesSTD = Data.ITimeseriesSTD;
+    handles.traceNeuropil = Data.traceNeuropil;
+    handles.activity= Data.activity;
+    handles.corrMatrix = Data.corrMatrix;
+    plotTrace(handles);
 end
+
+plotCells(handles);
 
 display('finished loading');
 guidata(hObject,handles);
-
-
-
 
 
 % --- Executes on button press in plotCells.
