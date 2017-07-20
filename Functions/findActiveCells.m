@@ -8,7 +8,7 @@ numCells=length(Cells);
 imageSize=size(ITimeseriesSTD,1);
 activeCellsBinaryImage = zeros(imageSize,imageSize);
 cellSize = 50;
-
+resizeFactor = handles.sizeImage/imageSize;
 %% 
 a=1;
 for c = 1:numCells
@@ -59,31 +59,35 @@ for c = 1:numCells
     [centers,radii, metric] = imfindcircles(patch,[1 10]);
 
     %ellipse(bestFits(:,3),bestFits(:,4),bestFits(:,5)*pi/180,bestFits(:,1),bestFits(:,2),'k');
-    if any(metric > 0.25)
-        x_center = centers(1,1)+ x1;
-        y_center = centers(1,2)+ y1;
-        radius = radii(1);
-        x1 = round(x_center - radius); x2 = round(x_center + radius);
-        y1 = round(y_center - radius); y2 = round(y_center + radius);
-        
-        %Check if out of boundary
-        if x2 > imageSize
-            x2 = imageSize;
-        end
-        if x1 < 1
-            x1 = 1;
-        end
-        if y2 > imageSize
-            y2 = imageSize;
-        end
-        if y1 < 1
-            y1 = 1;
-        end        
+    if ~isempty(metric)
+        if (metric(1) > 0.25) && (radii(1) > 3)
+            x_center = centers(1,1)+ x1;
+            y_center = centers(1,2)+ y1;
+            radius = radii(1)+2;
+            width = Cells(c).BoundingBox(3)/resizeFactor/2;
+            height = Cells(c).BoundingBox(4)/resizeFactor/2;
 
-        activeCellsBinaryImage(y1:y2,x1:x2) = 1; 
-        a=a+1;
+            x1 = round(x_center - radius); x2 = round(x_center + radius);
+            y1 = round(y_center - radius); y2 = round(y_center + radius);
+
+            %Check if out of boundary
+            if x2 > imageSize
+                x2 = imageSize;
+            end
+            if x1 < 1
+                x1 = 1;
+            end
+            if y2 > imageSize
+                y2 = imageSize;
+            end
+            if y1 < 1
+                y1 = 1;
+            end        
+
+            activeCellsBinaryImage(y1:y2,x1:x2) = 1; 
+            a=a+1;
+        end
     end
-
 end
 
 activeCells = regionprops(activeCellsBinaryImage>0, 'Area', 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');

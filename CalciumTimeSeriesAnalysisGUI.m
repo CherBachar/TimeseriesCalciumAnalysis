@@ -387,13 +387,21 @@ imageSize = size(ITimeseriesSTD,1);
 newCellsImage = zeros(imageSize,imageSize);
 
 %% Get new cells
-[xAdd,yAdd] = ginput;
-for i = 1:length(xAdd)
-    centroid = [xAdd(i), yAdd(i)];
-    x1 = round(centroid(1) - round(activeCellSize/2));
-    x2 = round(centroid(1) + round(activeCellSize/2));
-    y1 = round(centroid(2) - round(activeCellSize/2));
-    y2 = round(centroid(2) + round(activeCellSize/2));
+% [xAdd,yAdd] = ginput;
+%Add a rectangle
+rect = getrect;
+
+
+for i = 1:size(rect,1)
+%     centroid = [xAdd(i), yAdd(i)];
+%     x1 = round(centroid(1) - round(activeCellSize/2));
+%     x2 = round(centroid(1) + round(activeCellSize/2));
+%     y1 = round(centroid(2) - round(activeCellSize/2));
+%     y2 = round(centroid(2) + round(activeCellSize/2));
+    x1 = rect(1); %xmin
+    x2 = x1 + rect(3); %width
+    y1 = rect(2);
+    y2 = y1 + rect(4);
     %Check if out of boundary
     if x2 > imageSize
         x2 = imageSize;
@@ -455,7 +463,7 @@ Data.Cells = handles.Cells;
 Data.activeCells = handles.activeCells;
 Data.percentActive = handles.percentActive;
 
-if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
+if (sum(strcmp(fieldnames(handles), 'df_F0')) == 1)
     Data.ITimeseries = handles.ITimeseries;
     Data.trace = handles.trace;
     Data.df_F0 = handles.df_F0;
@@ -463,6 +471,8 @@ if (sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1)
     Data.corrMatrix = handles.corrMatrix;
     Data.ITimeseriesSTD = handles.ITimeseriesSTD;
     Data.traceNeuropil = handles.traceNeuropil;
+    Data.corrPerCell = handles.corrPerCell;
+    Data.corrAll = handles.corrAll;
 
 end
 save([handles.filename, '.mat'], 'Data');
@@ -485,7 +495,7 @@ handles.activeCells = Data.activeCells;
 handles.percentActive = Data.percentActive;
 
 
-if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
+if (sum(strcmp(fieldnames(Data), 'df_F0')) == 1)
     handles.trace = Data.trace;
     handles.df_F0 = Data.df_F0;
     handles.time = size(handles.trace,2);
@@ -495,6 +505,10 @@ if (sum(strcmp(fieldnames(Data), 'ITimeseries')) == 1)
     handles.activity= Data.activity;
     handles.corrMatrix = Data.corrMatrix;
     plotTrace(handles);
+end
+if (sum(strcmp(fieldnames(Data), 'corrAll')) == 1)
+    handles.corrPerCell = Data.corrPerCell;
+    handles.corrAll = Data.corrAll;
 end
 
 plotCells(handles);

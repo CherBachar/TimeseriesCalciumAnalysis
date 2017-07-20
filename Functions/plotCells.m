@@ -24,7 +24,7 @@ for c = 1:length(activeCells)
 end
 
 
-% Plot interest points
+    % Plot segmented cells
 if ~isempty(cellLocationsCells)
     axes(handles.axes1);
     imagesc(image); colormap(gray); hold on;
@@ -43,18 +43,23 @@ if ~isempty(cellLocationsCells)
 
     end
     hold off;
-
+    
+    %Plot active cells
     axes(handles.axes2);
     imagesc(ITimeseriesSTD); colormap(gray);
     title('STD Image with active cells');
     axis off;
     hold on;
     
-    plot(cellLocationsActiveCells(:,1),cellLocationsActiveCells(:,2), 'w*');
+%     plot(cellLocationsActiveCells(:,1),cellLocationsActiveCells(:,2), 'w*');
     
     for i = 1:size(cellLocationsActiveCells,1)
         hnd1=text(cellLocationsActiveCells(i,1),cellLocationsActiveCells(i,2),num2str(i));
         set(hnd1,'FontSize',12, 'Color', 'w')
+      thisBB = activeCells(i).BoundingBox;
+      rectangle('Position', [thisBB(1),thisBB(2),thisBB(3),thisBB(4)],...
+      'EdgeColor','w','LineWidth',1 );
+
     end
 
     hnd1=text(cellLocationsActiveCells(n,1),cellLocationsActiveCells(n,2),num2str(n));
