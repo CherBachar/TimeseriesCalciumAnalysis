@@ -473,7 +473,7 @@ if (sum(strcmp(fieldnames(handles), 'df_F0')) == 1)
     Data.traceNeuropil = handles.traceNeuropil;
     Data.corrPerCell = handles.corrPerCell;
     Data.corrAll = handles.corrAll;
-
+    Data.activityThreshold = handles.activityThreshold;
 end
 save([handles.filename, '.mat'], 'Data');
 
@@ -504,14 +504,15 @@ if (sum(strcmp(fieldnames(Data), 'df_F0')) == 1)
     handles.traceNeuropil = Data.traceNeuropil;
     handles.activity= Data.activity;
     handles.corrMatrix = Data.corrMatrix;
-    plotTrace(handles);
 end
 if (sum(strcmp(fieldnames(Data), 'corrAll')) == 1)
+    handles.activityThreshold = Data.activityThreshold;
     handles.corrPerCell = Data.corrPerCell;
     handles.corrAll = Data.corrAll;
 end
 
 plotCells(handles);
+plotTrace(handles);
 
 display('finished loading');
 guidata(hObject,handles);
