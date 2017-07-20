@@ -15,7 +15,9 @@ Installation:
 
 2. Pres 'Segment' - Segmentation of cells, and detection of active cells will appear in the axes. Upload the corresponding time-series calcium image.
 
-3. If you want to remove/ add cells, click on the corresponding button, and press 'Enter' once done. Please note you can add/remove both cells (left figure) and active cells (right figure). To display cells that were edited, click 'Plot Cells'. For active cells, draw a box around the cell you want to add.
+3. If you want to remove/ add cells, click on the corresponding button, and press 'Enter' once done. Please note you can add/remove both cells (left figure) and active cells (right figure). 
+For active cells, draw a box around the cell you want to add.
+To display cells that were edited, click 'Plot Cells'. 
 
 4. Once you detected all the cells you want, press 'Analyse Ca2+' to analyse the time-series calcium signal. 
 
