@@ -462,14 +462,14 @@ Data.meanImage = handles.meanImage;
 Data.Cells = handles.Cells;
 Data.activeCells = handles.activeCells;
 Data.percentActive = handles.percentActive;
+Data.ITimeseriesSTD = handles.ITimeseriesSTD;
+Data.ITimeseries = handles.ITimeseries;
 
 if (sum(strcmp(fieldnames(handles), 'df_F0')) == 1)
-    Data.ITimeseries = handles.ITimeseries;
     Data.trace = handles.trace;
     Data.df_F0 = handles.df_F0;
     Data.activity = handles.activity;
     Data.corrMatrix = handles.corrMatrix;
-    Data.ITimeseriesSTD = handles.ITimeseriesSTD;
     Data.traceNeuropil = handles.traceNeuropil;
     Data.corrPerCell = handles.corrPerCell;
     Data.corrAll = handles.corrAll;
@@ -493,17 +493,20 @@ handles.Cells = Data.Cells;
 handles.n = 1;
 handles.activeCells = Data.activeCells;
 handles.percentActive = Data.percentActive;
+handles.ITimeseries = Data.ITimeseries;
+handles.ITimeseriesSTD = Data.ITimeseriesSTD;
+
+plotCells(handles);
 
 
 if (sum(strcmp(fieldnames(Data), 'df_F0')) == 1)
     handles.trace = Data.trace;
     handles.df_F0 = Data.df_F0;
     handles.time = size(handles.trace,2);
-    handles.ITimeseries = Data.ITimeseries;
-    handles.ITimeseriesSTD = Data.ITimeseriesSTD;
     handles.traceNeuropil = Data.traceNeuropil;
     handles.activity= Data.activity;
     handles.corrMatrix = Data.corrMatrix;
+    plotTrace(handles);
 end
 if (sum(strcmp(fieldnames(Data), 'corrAll')) == 1)
     handles.activityThreshold = Data.activityThreshold;
@@ -511,8 +514,6 @@ if (sum(strcmp(fieldnames(Data), 'corrAll')) == 1)
     handles.corrAll = Data.corrAll;
 end
 
-plotCells(handles);
-plotTrace(handles);
 
 display('finished loading');
 guidata(hObject,handles);
