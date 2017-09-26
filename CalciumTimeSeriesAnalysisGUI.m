@@ -185,7 +185,7 @@ if ~isempty(handles.Cells)
 
 
 else
-    disp('Did not find any cells. Add cells manually, then press Segment.');
+    disp('Did not find any cells. Add cells manually, press Plot to display, then press Detect active cells.');
     ITimeseriesSTD = std(ITimeseries,0, 3);
     handles.ITimeseriesSTD = ITimeseriesSTD;
 end
@@ -263,7 +263,7 @@ if ~isempty(handles.Cells)
 
 
 else
-    disp('Did not find any cells. Add cells manually, then press Segment.');
+    disp('Did not find any cells. Add cells manually, press Plot to display, then press Detect active cells.');
     ITimeseriesSTD = std(ITimeseries,0, 3);
     handles.ITimeseriesSTD = ITimeseriesSTD;
 end
