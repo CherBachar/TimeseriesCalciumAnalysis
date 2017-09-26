@@ -123,6 +123,76 @@ handles.load = 0;
 if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
     handles = rmfield(handles,'ITimeseries');
 end
+
+
+%% %%%%%% SEGMENT %%%%%%%%
+if sum(strcmp(fieldnames(handles), 'ITimeseries')) == 1
+    ITimeseries =handles.ITimeseries;
+    numLayers = size(ITimeseries,3); 
+%if you didn't analyse or load
+else
+    uiwait(msgbox('Load the corresponding time-series tif stack'));
+    [filename, filepath] = uigetfile('*.tif*');
+    handles.imageStack_fullfilepath = [filepath,filename];
+    imgInfo = imfinfo(handles.imageStack_fullfilepath);
+    numLayers = length(imgInfo);
+    for time = 1:numLayers
+        ITimeseries(:,:,time) = double(imread(handles.imageStack_fullfilepath, time));
+    end
+end
+
+handles.ITimeseries = ITimeseries;
+%% segmentation of all cells
+if (sum(strcmp(fieldnames(handles), 'Cells')) == 1)
+    if isempty(handles.Cells)
+        disp('Did not find any cells. Add cells manually, then resegment.');
+    else
+        Cells = handles.Cells;
+    end
+else
+    [cellLocations] = detectPoints(handles.meanImage, handles);
+    [Cells] = segmentCells(handles.meanImage, handles, cellLocations);
+    handles.Cells = Cells;
+    
+end
+
+%% get cell masks
+if ~isempty(handles.Cells)
+    sizeITs = size(ITimeseries,1);
+    binaryImage = zeros(handles.sizeImage);
+    binaryImageNeuropil = zeros(handles.sizeImage);
+
+    %Cells and neuropil
+    for l = 1:length(Cells)
+        %Get cell mask
+        tempMaskCell = zeros(handles.sizeImage);
+        index = Cells(l).PixelIdxList;
+        binaryImage(index)=1;
+        tempMaskCell(index)=1;
+        maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
+    end
+
+    binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
+    binaryNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
+
+    %% get active cells
+    %get variance through time series image
+    ITimeseriesSTD = std(ITimeseries,0, 3);
+    handles.ITimeseriesSTD = ITimeseriesSTD;
+    handles.maskResized = maskResized;
+
+    handles = findActiveCells(handles);
+
+
+else
+    disp('Did not find any cells. Add cells manually, then press Segment.');
+    ITimeseriesSTD = std(ITimeseries,0, 3);
+    handles.ITimeseriesSTD = ITimeseriesSTD;
+end
+
+
+plotCells(handles);
+
 guidata(hObject,handles);
 
 
@@ -152,42 +222,53 @@ end
 
 handles.ITimeseries = ITimeseries;
 %% segmentation of all cells
-[cellLocations] = detectPoints(handles.meanImage, handles);
-[Cells] = segmentCells(handles.meanImage, handles, cellLocations);
-handles.Cells = Cells;
-
-
-%% get cell masks
-sizeITs = size(ITimeseries,1);
-binaryImage = zeros(handles.sizeImage);
-binaryImageNeuropil = zeros(handles.sizeImage);
-
-%Cells and neuropil
-for l = 1:length(Cells)
-    %Get cell mask
-    tempMaskCell = zeros(handles.sizeImage);
-    index = Cells(l).PixelIdxList;
-    binaryImage(index)=1;
-    tempMaskCell(index)=1;
-    maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
+if (sum(strcmp(fieldnames(handles), 'Cells')) == 1)
+    if isempty(handles.Cells)
+        disp('Did not find any cells. Add cells manually, then resegment.');
+    else
+        Cells = handles.Cells;
+    end
+else
+    [cellLocations] = detectPoints(handles.meanImage, handles);
+    [Cells] = segmentCells(handles.meanImage, handles, cellLocations);
+    handles.Cells = Cells;
 end
 
-binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
-binaryNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
+%% get cell masks
+if ~isempty(handles.Cells)
+    sizeITs = size(ITimeseries,1);
+    binaryImage = zeros(handles.sizeImage);
+    binaryImageNeuropil = zeros(handles.sizeImage);
 
-%% get active cells
-%get variance through time series image
-ITimeseriesSTD = std(ITimeseries,0, 3);
+    %Cells and neuropil
+    for l = 1:length(Cells)
+        %Get cell mask
+        tempMaskCell = zeros(handles.sizeImage);
+        index = Cells(l).PixelIdxList;
+        binaryImage(index)=1;
+        tempMaskCell(index)=1;
+        maskResized(:,:,l) = imresize(tempMaskCell, [sizeITs sizeITs])>0;
+    end
 
-handles.ITimeseriesSTD = ITimeseriesSTD;
-handles.maskResized = maskResized;
+    binaryImageResized = imresize(binaryImage, [sizeITs sizeITs]);
+    binaryNeuropilResized = imresize(binaryImageNeuropil, [sizeITs sizeITs]);
 
-handles = findActiveCells(handles);
+    %% get active cells
+    %get variance through time series image
+    ITimeseriesSTD = std(ITimeseries,0, 3);
+    handles.ITimeseriesSTD = ITimeseriesSTD;
+    handles.maskResized = maskResized;
+
+    handles = findActiveCells(handles);
 
 
-
-%% Plot cells
+else
+    disp('Did not find any cells. Add cells manually, then press Segment.');
+    ITimeseriesSTD = std(ITimeseries,0, 3);
+    handles.ITimeseriesSTD = ITimeseriesSTD;
+end
 plotCells(handles);
+
 guidata(hObject,handles);
 
 
@@ -327,23 +408,41 @@ function Contrast_Callback(hObject, eventdata, handles)
 imcontrast(gca);
 
 
-
-
 % --- Executes on button press in AddCells.
 function AddCells_Callback(hObject, eventdata, handles)
 % hObject    handle to AddCells (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-Cells = handles.Cells;
+
+
+if (sum(strcmp(fieldnames(handles), 'Cells')) == 1)
+    Cells = handles.Cells;
+end
+% else
+%     Cells = createEmptyCellsStruct();
+% end
+
 %Get new cells
 [xAdd,yAdd] = ginput;
 locationsAdd = [xAdd,yAdd];
 if ~isempty(locationsAdd)
     locationsAdd = addPoints(locationsAdd, handles.meanImage);
+    for i = 1:size(locationsAdd,1)
+    newCells(i,:) = segmentAddedCells(handles.meanImage, handles, locationsAdd(i,:));
+    end
+    if ~isempty(newCells)
+        if (sum(strcmp(fieldnames(handles), 'Cells')) == 1)
+            if ~isempty(Cells) 
+                Cells = [Cells; newCells];
+            else
+                Cells = newCells;
+            end
+        else
+            Cells = newCells;
+        end
+    handles.Cells = Cells;    
+    end
     
-    [newCells] = segmentCells(handles.meanImage, handles, locationsAdd);
-    Cells = [Cells; newCells];
-    handles.Cells = Cells;
     %plotCells(handles);
 end
 guidata(hObject,handles);

@@ -1,7 +1,7 @@
-function [Cells] = segmentCells(I, handles, cellLocations)
+function [Cells] = segmentAddedCells(I, handles, cellLocations)
 %This function recieves mean image detects points, and segments them
 Plot = 0;
-cellSize = handles.cellSize;
+cellSize = 30;
 neuropilSize = 50;
 con = handles.con;
 sizeImage = size(I,1);
@@ -47,15 +47,15 @@ for n = 1:length(cellPatch)
     meanPixelVal = mean(patch(:));
     stdPixel = std(patch(:));
     thresh = meanPixelVal + stdPixel;
-    BW = patch > thresh;
+    BW2 = patch > thresh;
     
     %remove small regions
-    BW2 = bwareaopen(BW,100,con);
+    %BW2 = bwareaopen(BW,100,con);
     
     %dilate
-    BW2 = bwmorph(BW2,'close',inf);  
+    %BW2 = bwmorph(BW,'close',inf);  
     
-    %remove all but 2 cells
+    %remove all but 1 cells
     [BWLabelled, num] = bwlabel(BW2, con);
     if num > 1
         area = [];
@@ -66,9 +66,7 @@ for n = 1:length(cellPatch)
         end
     
     [~,index1] = max(area);
-    area(index1)=0;
-    [~,index2] = max(area);
-    BW2 = (tempPatch(:,:,index1) + tempPatch(:,:,index2))> 0;
+    BW2 = tempPatch(:,:,index1)> 0;
     end
     
     binaryImage(y1(n):y2(n),x1(n):x2(n)) = BW2;
@@ -86,28 +84,14 @@ for n = 1:length(cellPatch)
 end
 
 %closing
-binaryImage = bwmorph(binaryImage,'close',inf); 
+%binaryImage = bwmorph(binaryImage,'close',inf); 
 
 %remove small regions
-binaryImage = bwareaopen(binaryImage,100,con);
+%binaryImage = bwareaopen(binaryImage,100,con);
 
 %remove high elonaged structures using Eccentricity
 Cells=regionprops(binaryImage, 'Area', 'Centroid', 'Eccentricity', 'PixelIdxList', 'BoundingBox');
 
-
-if ~isempty(Cells)
-    remEccentricity = logical(zeros(1,length(Cells)));
-    for r = 1:length(Cells)
-        remEccentricity(r) = Cells(r).Eccentricity > eccThresh;
-    end
-    
-    if ~isempty(remEccentricity)
-        Cells(remEccentricity) = [];
-    end
-end
-% if ~isempty(remEccentricity)
-%     Cells(remEccentricity) = [];
-% end
 
 %Get neuropil mask per cell
 for c = 1:length(Cells)

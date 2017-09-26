@@ -21,8 +21,10 @@ for c = 1:numCells
            area(j) = temp(j).Area;
         end
     
-    [~,index] = max(area);
-    tempCell = temp(index);
+        [~,index] = max(area);
+        tempCell = temp(index);
+    else 
+        tempCell = temp;
     end
     
     centroid = tempCell.Centroid;
